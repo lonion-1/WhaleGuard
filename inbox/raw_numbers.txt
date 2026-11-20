@@ -1,2 +1,10 @@
 # Tempel nomor penipu mentah (08xx / +628xx) atau teks laporan di bawah ini.
 # Bot Auto-Harvester akan otomatis mengubahnya jadi Regex di rules/numbers-spam-id.txt.
+
++6285592524679
++6282356131802
++6282356131818
++6282356131991
++6282356131991
++6282356131818
++6282356131802
