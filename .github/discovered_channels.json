@@ -27,6 +27,22 @@
     "hatihaticlonerekber": {
       "misses": 0,
       "source": "snowball"
+    },
+    "darloxa_penipu_nokos": {
+      "misses": 0,
+      "source": "directory"
+    },
+    "linkpinjol": {
+      "misses": 0,
+      "source": "directory"
+    },
+    "maswitjaksono": {
+      "misses": 0,
+      "source": "directory"
+    },
+    "krbnpenipu": {
+      "misses": 0,
+      "source": "snowball"
     }
   },
   "rejected": [
@@ -45,6 +61,22 @@
     "hancurrak",
     "di40indonesia",
     "jjjsjsjskh",
-    "penipukon"
+    "penipukon",
+    "mendarah",
+    "pnpunh",
+    "vetro_oscurato",
+    "lyzemcom",
+    "yusup_pinetwork",
+    "sharingpinjol",
+    "dunhillpenipu",
+    "jebakanpinjolilegal",
+    "taran_vogel",
+    "pmbr_ardrp",
+    "hf_livechat",
+    "wwwinvesbodong",
+    "loker_jakarta",
+    "hsbpenipusemua",
+    "aksigagalbayarpinjol",
+    "BantaiPenipyu"
   ]
 }
