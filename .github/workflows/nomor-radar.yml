@@ -1,0 +1,56 @@
+name: Radar Nomor Sosmed (WhaleGuard)
+
+on:
+  schedule:
+    - cron: '0 22 * * *' # Jalan otomatis setiap hari pukul 05:00 WIB
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  scan-nomor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo WhaleGuard
+        uses: actions/checkout@v4
+
+      - name: Pindai khusus nomor telepon dari Reddit, FB & Telegram
+        id: radar
+        run: python3 scripts/nomor_radar.py
+
+      - name: Buka Issue hanya jika ada nomor telepon baru
+        if: steps.radar.outputs.has_findings == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('nomor_report.md', 'utf8');
+            const tgl = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Radar Nomor]: ${tgl}`,
+              labels: ['radar-intel'],
+              body: body
+            });
+
+      - name: Simpan riwayat pemindaian
+        if: always()
+        run: |
+          if [ ! -f .github/nomor_radar_seen.json ]; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/nomor_radar_seen.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(radar): update seen items [skip ci]"
+            for i in 1 2 3; do
+              if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
+                exit 0
+              fi
+              sleep 5
+            done
+          fi
