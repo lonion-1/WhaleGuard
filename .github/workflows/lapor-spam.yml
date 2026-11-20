@@ -1,0 +1,228 @@
+name: Auto-Check & Process Spam Report (WhaleGuard)
+# Copyright (c) 2026 <EazyWhale>
+# Licensed under the MIT License.
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: whaleguard-ci
+  cancel-in-progress: false
+
+jobs:
+  process-spam-report:
+    if: >
+      (
+        contains(github.event.issue.labels.*.name, 'lapor-spam') ||
+        startsWith(github.event.issue.title, '[Lapor Spam]:')
+      ) &&
+      (
+        github.event.action == 'opened' ||
+        (github.event.action == 'labeled' && github.event.label.name == 'approved')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo WhaleGuard
+        uses: actions/checkout@v4
+
+      - name: Periksa cakupan aturan & proses laporan
+        id: check
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess, sys
+          from pathlib import Path
+
+          body = os.environ.get("ISSUE_BODY", "")
+          issue_user = os.environ.get("ISSUE_USER", "")
+          repo_owner = os.environ.get("REPO_OWNER", "")
+          action = os.environ.get("EVENT_ACTION", "")
+          label = os.environ.get("EVENT_LABEL", "")
+          gh_out = os.environ["GITHUB_OUTPUT"]
+
+          def out(k, v):
+              with open(gh_out, "a", encoding="utf-8") as f:
+                  f.write(f"{k}<<EOF\n{v}\nEOF\n")
+
+          def load_patterns(path: Path):
+              pats = []
+              if not path.exists():
+                  return pats
+              for l in path.read_text(encoding="utf-8").splitlines():
+                  s = l.strip()
+                  if not s or s.startswith("!"):
+                      continue
+                  try:
+                      pats.append((s, re.compile(s)))
+                  except re.error:
+                      pass
+              return pats
+
+          sections = {}
+          current = None
+          for line in body.splitlines():
+              if line.startswith("### "):
+                  current = line[4:].strip()
+                  sections[current] = []
+              elif current is not None:
+                  sections[current].append(line)
+
+          jenis = "\n".join(sections.get("Jenis Laporan", [])).strip()
+          raw_items = [
+              l.strip() for l in sections.get("Nomor Telepon / Isi Contoh SMS atau Pola Regex", [])
+              if l.strip() and l.strip() != "_No response_"
+          ]
+
+          if not raw_items:
+              out("reply_msg", "❌ **Isian kosong.** Silakan masukkan nomor telepon atau contoh SMS/regex spam.")
+              out("should_close", "false")
+              out("file_updated", "false")
+              sys.exit(0)
+
+          is_approved_or_owner = (issue_user == repo_owner) or (action == "labeled" and label == "approved")
+          file_updated = False
+          blocks = []
+
+          # JALUR 1: LAPOR NOMOR TELEPON
+          if "Nomor Telepon" in jenis:
+              num_file = Path("rules/numbers-spam-id.txt")
+              existing_pats = load_patterns(num_file)
+              already_blocked = []
+              new_numbers = []
+              invalid_nums = []
+
+              for item in raw_items:
+                  bersih = re.sub(r"[\s\-().]", "", item)
+                  if not re.fullmatch(r"(?:\+?62|0)[2-9][0-9]{6,12}", bersih):
+                      invalid_nums.append(item)
+                      continue
+                  if any(rx.search(bersih) for _, rx in existing_pats):
+                      already_blocked.append(item)
+                  elif bersih not in new_numbers:
+                      new_numbers.append(bersih)
+
+              if already_blocked:
+                  blocks.append("ℹ️ **Nomor Sudah Tercakup di `rules/numbers-spam-id.txt`:** " + ", ".join(f"`{n}`" for n in already_blocked))
+
+              if new_numbers:
+                  if is_approved_or_owner:
+                      isi = num_file.read_text(encoding="utf-8") if num_file.exists() else ""
+                      num_file.write_text(isi.rstrip() + "\n" + "\n".join(new_numbers) + "\n", encoding="utf-8")
+                      subprocess.run(["python3", "scripts/validate_and_build.py"], check=True)
+                      file_updated = True
+                      blocks.append("✅ **Berhasil Ditambahkan ke `rules/numbers-spam-id.txt`:**\n" + "\n".join(f"* `{n}`" for n in new_numbers))
+                  else:
+                      blocks.append("⏳ **Nomor Baru Terdeteksi — Menunggu Persetujuan Maintainer (`approved`):**\n" + "\n".join(f"* `{n}`" for n in new_numbers))
+
+              if invalid_nums:
+                  blocks.append("⚠️ **Format nomor tidak dikenali (gunakan format Indonesia `08...` atau `+628...`):** " + ", ".join(f"`{x}`" for x in invalid_nums))
+
+              should_close = (len(new_numbers) == 0) or is_approved_or_owner
+
+          # JALUR 2: LAPOR SMS JUDOL / SCAM
+          else:
+              target_file = Path("rules/sms-judol-id.txt") if "Judol" in jenis else Path("rules/sms-scam-pinjol-id.txt")
+              all_sms_pats = load_patterns(Path("rules/sms-judol-id.txt")) + load_patterns(Path("rules/sms-scam-pinjol-id.txt"))
+
+              sudah_tertangkap = []
+              lolos_filter = []
+
+              for item in raw_items:
+                  if any(rx.search(item) for _, rx in all_sms_pats):
+                      sudah_tertangkap.append(item)
+                  else:
+                      lolos_filter.append(item)
+
+              if sudah_tertangkap:
+                  blocks.append(
+                      "🛡️ **Kabar Baik! Contoh SMS Berikut Sudah Otomatis Tertangkap oleh Regex WhaleGuard:**\n"
+                      + "\n".join(f"* `{x[:80]}{'...' if len(x) > 80 else ''}`" for x in sudah_tertangkap)
+                  )
+
+              if lolos_filter:
+                  # Jika user/owner mengirim langsung pola regex (diawali '(?i)' atau '^') dan sudah disetujui
+                  valid_regexes = []
+                  sample_texts = []
+                  for x in lolos_filter:
+                      if x.startswith(("(?i)", "^", "\\b")):
+                          try:
+                              re.compile(x)
+                              valid_regexes.append(x)
+                              continue
+                          except re.error:
+                              pass
+                      sample_texts.append(x)
+
+                  if is_approved_or_owner and valid_regexes:
+                      isi = target_file.read_text(encoding="utf-8") if target_file.exists() else ""
+                      target_file.write_text(isi.rstrip() + "\n" + "\n".join(valid_regexes) + "\n", encoding="utf-8")
+                      subprocess.run(["python3", "scripts/validate_and_build.py"], check=True)
+                      file_updated = True
+                      blocks.append(f"✅ **Pola Regex Baru Ditambahkan ke `{target_file.as_posix()}`:**\n" + "\n".join(f"* `{r}`" for r in valid_regexes))
+                      lolos_filter = sample_texts
+
+                  if lolos_filter:
+                      blocks.append(
+                          f"⏳ **Sampel SMS Baru Lolos dari Filter (Target: `{target_file.as_posix()}`):**\n"
+                          "Menunggu **EazyWhale** meracik pola regex anti-*false positive* dan memberi label `approved`:\n"
+                          + "\n".join(f"* `{x[:100]}{'...' if len(x) > 100 else ''}`" for x in lolos_filter)
+                      )
+
+              should_close = (len(lolos_filter) == 0)
+
+          out("reply_msg", "\n\n".join(blocks))
+          out("should_close", "true" if should_close else "false")
+          out("file_updated", "true" if file_updated else "false")
+          PY
+
+      - name: Commit & push pembaruan WhaleGuard
+        if: steps.check.outputs.file_updated == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rules/ README.md last-run.txt
+          if ! git diff --staged --quiet; then
+            git commit -m "feat(rules): add reported spam rules (#${{ github.event.issue.number }})"
+            for i in 1 2 3; do
+              if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
+                exit 0
+              fi
+              sleep 5
+            done
+            exit 1
+          fi
+
+      - name: Balas komentar & tutup Issue jika tuntas
+        uses: actions/github-script@v7
+        env:
+          REPLY_MSG: ${{ steps.check.outputs.reply_msg }}
+          SHOULD_CLOSE: ${{ steps.check.outputs.should_close }}
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: process.env.REPLY_MSG
+            });
+
+            if (process.env.SHOULD_CLOSE === 'true') {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                state: 'closed',
+                state_reason: 'completed'
+              });
+            }
