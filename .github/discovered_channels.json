@@ -1,48 +1,144 @@
 {
   "channels": {
     "rekampenipu": {
-      "misses": 0,
-      "source": "seed"
+      "source": "seed",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "cekrekening": {
-      "misses": 0,
-      "source": "seed"
+      "source": "seed",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "scamdetector_id": {
-      "misses": 0,
-      "source": "seed"
+      "source": "seed",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "penipustarsp": {
-      "misses": 0,
-      "source": "snowball"
+      "source": "snowball",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "gagalbayar": {
-      "misses": 0,
-      "source": "directory"
+      "source": "directory",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "penipunokoshopee": {
-      "misses": 0,
-      "source": "snowball"
+      "source": "snowball",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "hatihaticlonerekber": {
-      "misses": 0,
-      "source": "snowball"
+      "source": "snowball",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "darloxa_penipu_nokos": {
-      "misses": 0,
-      "source": "directory"
+      "source": "directory",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "linkpinjol": {
-      "misses": 0,
-      "source": "directory"
+      "source": "directory",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "maswitjaksono": {
-      "misses": 0,
-      "source": "directory"
+      "source": "directory",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
     },
     "krbnpenipu": {
-      "misses": 0,
-      "source": "snowball"
+      "source": "snowball",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
+    },
+    "pantaupenipu": {
+      "source": "snowball",
+      "scans": 0,
+      "harvested": 0,
+      "dry_runs": 0,
+      "misses": 0
+    },
+    "penipucellaaaqg": {
+      "source": "snowball",
+      "scans": 0,
+      "harvested": 0,
+      "dry_runs": 0,
+      "misses": 0
+    },
+    "penipuangrup": {
+      "source": "snowball",
+      "scans": 0,
+      "harvested": 0,
+      "dry_runs": 0,
+      "misses": 0
+    },
+    "pnipunokshop": {
+      "source": "snowball",
+      "scans": 0,
+      "harvested": 0,
+      "dry_runs": 0,
+      "misses": 0
+    },
+    "penipumemekpuqi": {
+      "source": "snowball",
+      "scans": 0,
+      "harvested": 0,
+      "dry_runs": 0,
+      "misses": 0
+    },
+    "penipuanjbgt12356": {
+      "source": "snowball",
+      "scans": 0,
+      "harvested": 0,
+      "dry_runs": 0,
+      "misses": 0
+    },
+    "celahhpenipu": {
+      "source": "snowball",
+      "scans": 0,
+      "harvested": 0,
+      "dry_runs": 0,
+      "misses": 0
+    },
+    "penipunyed": {
+      "source": "snowball",
+      "scans": 0,
+      "harvested": 0,
+      "dry_runs": 0,
+      "misses": 0
+    },
+    "penipunokwaanjing": {
+      "source": "snowball",
+      "scans": 0,
+      "harvested": 0,
+      "dry_runs": 0,
+      "misses": 0
     }
   },
   "rejected": [
@@ -77,6 +173,17 @@
     "loker_jakarta",
     "hsbpenipusemua",
     "aksigagalbayarpinjol",
-    "BantaiPenipyu"
+    "BantaiPenipyu",
+    "bogkarteleiscam",
+    "irinarecivemoney",
+    "kronologipenipumukajelek",
+    "BASEWIBCS",
+    "Penipusyalanan",
+    "penipunokosnibos",
+    "basewtbchat",
+    "peIacmur",
+    "penipupicfkef",
+    "pembnokepsukanipu",
+    "peniputelasosundalaa"
   ]
 }
