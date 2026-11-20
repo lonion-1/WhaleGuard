@@ -1,12 +1,11 @@
 # Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Licensed under the GNU Affero General Public License v3.0.
-"""WhaleGuard Unified Radar v7.1 (Anti-403 Search RSS + Telegram Public + DDG).
+"""WhaleGuard Unified Radar v7.2 (Telegram Deep-Scroll Pagination + Bing Telegram RSS).
 
-Sumber pencarian (ramah IP GitHub Actions, tanpa API key):
-1. Bing Web Search RSS (?format=rss) -> mengindeks Reddit, Facebook Groups, dan web umum.
-2. Telegram Public Channel Web Preview (https://t.me/s/<channel>).
-3. DuckDuckGo HTML Search -> fallback lintas forum & media sosial.
+Sumber pencarian:
+1. Telegram Public Channel Web Preview (https://t.me/s/<channel>) dengan pagination ?before=.
+2. Bing Web Search RSS (?format=rss) khusus indeks publik site:t.me/s/.
 """
 import hashlib
 import html
@@ -20,28 +19,22 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-BING_WEB_TARGETS = [
-    ("Bing -> Reddit ID", 'site:reddit.com/r/indonesia (penipu OR penipuan OR pinjol OR judol OR scam OR apk)'),
-    ("Bing -> Reddit Finansial", 'site:reddit.com/r/finansial (penipu OR penipuan OR pinjol OR phishing OR teror)'),
-    ("Bing -> Facebook Penipuan", 'site:facebook.com ("nomor penipu" OR "no penipu" OR "akun penipu" OR "undangan apk")'),
-    ("Bing -> Facebook Pinjol", 'site:facebook.com/groups (pinjol OR galbay OR "debt collector" OR teror)'),
-    ("Bing -> Telegram Publik", 'site:t.me/s/ ("nomor penipu" OR "no penipu" OR pinjol OR penipuan)'),
-]
-
-# Tambahkan username kanal Telegram publik info penipuan/pinjol di sini (tanpa '@')
 TELEGRAM_CHANNELS = [
-    "infopenipuan",
+    "rekampenipu",
     "cekrekening",
-    "korbanpinjol",
+    "scamdetector_id",
+    "Informasi_DariAnda",
+    "blacklist_ent_indonesia",
+    "notoscam",
+    "Kredivo_LaporanPenipuan",
 ]
 
-DDG_QUERIES = [
-    ("DDG -> Reddit Penipu", 'site:reddit.com/r/indonesia penipu OR pinjol "08"'),
-    ("DDG -> Nomor Penipu", '"nomor penipu" OR "no penipu" "08"'),
-    ("DDG -> Teror Pinjol", '"teror pinjol" OR "dc pinjol" "08"'),
+BING_WEB_TARGETS = [
+    ("Bing -> Telegram Penipu", 'site:t.me/s/ ("nomor penipu" OR "no penipu" OR "wa penipu" OR penipuan)'),
+    ("Bing -> Telegram Pinjol", 'site:t.me/s/ (pinjol OR galbay OR "debt collector" OR "undangan apk")'),
 ]
 
-MAX_STATE = 3000
+MAX_STATE = 3500
 STATE_FILE = Path(".github/nomor_radar_seen.json")
 RULES_FILE = Path("rules/numbers-spam-id.txt")
 ALLOWLIST_FILE = Path("rules/numbers-allowlist.txt")
@@ -144,6 +137,49 @@ def http_get(url: str) -> str | None:
         return None
 
 
+def fetch_telegram_channel(channel: str, max_pages: int = 5) -> list[dict]:
+    hasil = []
+    seen_local: set[str] = set()
+    before_id: str | None = None
+
+    for _ in range(max_pages):
+        url = f"https://t.me/s/{channel}" + (f"?before={before_id}" if before_id else "")
+        raw = http_get(url)
+        if not raw:
+            break
+
+        blocks = re.findall(
+            r'data-post="([^"]+)"[\s\S]*?<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)</div>',
+            raw,
+        )
+        if not blocks:
+            break
+
+        for post_id, msg_html in blocks:
+            if post_id in seen_local:
+                continue
+            seen_local.add(post_id)
+            clean = bersihkan_html(msg_html)
+            if clean:
+                hasil.append({
+                    "id": f"tg:{post_id}",
+                    "source": f"Telegram @{channel}",
+                    "title": clean[:90],
+                    "text": clean,
+                })
+
+        first_post = blocks[0][0]
+        if "/" not in first_post:
+            break
+        oldest_num = first_post.split("/")[-1]
+        if not oldest_num.isdigit() or oldest_num == before_id or int(oldest_num) <= 1:
+            break
+        before_id = oldest_num
+        time.sleep(1.0)
+
+    return hasil
+
+
 def fetch_bing_rss(label: str, query: str) -> list[dict]:
     encoded = urllib.parse.quote(query)
     url = f"https://www.bing.com/search?q={encoded}&format=rss"
@@ -167,50 +203,6 @@ def fetch_bing_rss(label: str, query: str) -> list[dict]:
                 "source": label,
                 "title": title,
                 "text": desc,
-            })
-    return hasil
-
-
-def fetch_telegram_channel(channel: str) -> list[dict]:
-    url = f"https://t.me/s/{channel}"
-    raw = http_get(url)
-    if not raw:
-        return []
-
-    hasil = []
-    blocks = re.findall(
-        r'data-post="([^"]+)"[\s\S]*?<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)</div>',
-        raw,
-    )
-    for post_id, msg_html in blocks:
-        clean = bersihkan_html(msg_html)
-        if clean:
-            hasil.append({
-                "id": f"tg:{post_id}",
-                "source": f"Telegram @{channel}",
-                "title": clean[:90],
-                "text": clean,
-            })
-    return hasil
-
-
-def fetch_ddg(label: str, query: str) -> list[dict]:
-    encoded = urllib.parse.quote(query)
-    url = f"https://html.duckduckgo.com/html/?q={encoded}"
-    raw = http_get(url)
-    if not raw:
-        return []
-
-    hasil = []
-    snippets = re.findall(r'class="result__snippet"[^>]*>([\s\S]*?)</a>', raw)
-    for snip_html in snippets:
-        clean = bersihkan_html(snip_html)
-        if clean:
-            hasil.append({
-                "id": buat_id_stabil("ddg", clean),
-                "source": label,
-                "title": clean[:90],
-                "text": clean,
             })
     return hasil
 
@@ -251,23 +243,17 @@ def main() -> int:
 
     semua_post: list[dict] = []
 
+    for ch in TELEGRAM_CHANNELS:
+        items = fetch_telegram_channel(ch, max_pages=5)
+        print(f"[INFO] Telegram @{ch}: {len(items)} pesan")
+        semua_post.extend(items)
+        time.sleep(1.0)
+
     for label, q in BING_WEB_TARGETS:
         items = fetch_bing_rss(label, q)
         print(f"[INFO] {label}: {len(items)} hasil")
         semua_post.extend(items)
         time.sleep(1.5)
-
-    for ch in TELEGRAM_CHANNELS:
-        items = fetch_telegram_channel(ch)
-        print(f"[INFO] Telegram @{ch}: {len(items)} pesan")
-        semua_post.extend(items)
-        time.sleep(1.0)
-
-    for label, q in DDG_QUERIES:
-        items = fetch_ddg(label, q)
-        print(f"[INFO] {label}: {len(items)} hasil")
-        semua_post.extend(items)
-        time.sleep(2.5)
 
     nomor_baru: set[str] = set()
     for post in semua_post:
