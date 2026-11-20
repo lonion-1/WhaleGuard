@@ -2,10 +2,12 @@
 ! Copyright (c) 2026 <EazyWhale>
 ! License: GNU General Public License v3.0 (GPL-3.0)
 ! Maintainer: EazyWhale
+! Version: 2026.11.20.1016
+! Total Rules: 5
 ! --------------------------------------------------
 
-(?i)\b(slot\s*88|slot\s*gacor|gacor\s*(hari\s*ini|parah|abis|terus)|maxwin|zeus\s*x?\d+|scatter\s*hitam|rtp\s*live|pola\s*gacor|jam\s*gacor)\b
-(?i)\b(situs\s*slot|judi\s*online|bola\s*tangkas|sabung\s*ayam\s*online|live\s*casino|togel\s*(online|hk|sgp|sdy|macau))\b
 (?i)\b(depo(sit)?\s*(pulsa|dana|ovo|qris|bank).*(tanpa\s*potongan|bonus|new\s*member|garansi)|bonus\s*new\s*member\s*\d+%|garansi\s*kekalahan\s*\d+%)\b
 (?i)\b(link\s*alternatif.*(slot|gacor|maxwin|togel)|daftar\s*sekarang.*(jackpot|maxwin|slot)|bocoran\s*admin.*(slot|maxwin))\b
+(?i)\b(situs\s*slot|judi\s*online|bola\s*tangkas|sabung\s*ayam\s*online|live\s*casino|togel\s*(online|hk|sgp|sdy|macau))\b
+(?i)\b(slot\s*88|slot\s*gacor|gacor\s*(hari\s*ini|parah|abis|terus)|maxwin|zeus\s*x?\d+|scatter\s*hitam|rtp\s*live|pola\s*gacor|jam\s*gacor)\b
 (?i)\b(wd\s*(lancar|kilat|cepat)|withdraw\s*\d+\s*(jt|juta)|akun\s*(vip|pro|winstreak).*(slot|maxwin))\b

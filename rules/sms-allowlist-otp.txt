@@ -2,8 +2,10 @@
 ! Copyright (c) 2026 <EazyWhale>
 ! License: GNU General Public License v3.0 (GPL-3.0)
 ! Maintainer: EazyWhale
+! Version: 2026.11.20.1016
+! Total Rules: 3
 ! --------------------------------------------------
 
 (?i)\b(kode\s*(otp|verifikasi|rahasia)|otp\s*(anda|code)|jangan\s*berikan\s*kode\s*ini)\b
-(?i)\b(transaksi\s*(berhasil|sukses)|mutasi\s*rekening|pembayaran\s*berhasil)\b
 (?i)\b(paket\s*dengan\s*no\.?\s*resi|kurir\s*kami\s*sedang\s*mengantar)\b
+(?i)\b(transaksi\s*(berhasil|sukses)|mutasi\s*rekening|pembayaran\s*berhasil)\b
