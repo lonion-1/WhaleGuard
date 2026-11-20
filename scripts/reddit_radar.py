@@ -1,6 +1,6 @@
 # Copyright (c) 2026 <EazyWhale>
 # Licensed under the MIT License.
-"""WhaleGuard Radar: pantau laporan penipuan Reddit via RSS & Google Index Bridge.
+"""WhaleGuard Radar: pantau laporan penipuan & modus SMS spam dari Reddit (Filtered).
 
 Output: reddit_report.md (isi issue) + flag has_findings di $GITHUB_OUTPUT.
 """
@@ -16,10 +16,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 TARGETS = [
-    ("r/indonesia", "site:reddit.com/r/indonesia (penipu OR penipuan OR pinjol OR judol OR apk)"),
-    ("r/finansial", "site:reddit.com/r/finansial (penipu OR penipuan OR pinjol OR phishing OR scam)"),
-    ("r/indotech", "site:reddit.com/r/indotech (penipu OR penipuan OR spam OR phishing)"),
-    ("r/Scams (ID)", "site:reddit.com/r/Scams (Indonesia OR WhatsApp OR APK)"),
+    ("r/indonesia", "site:reddit.com/r/indonesia intitle:(penipu OR penipuan OR pinjol OR judol OR scam OR apk OR spam)"),
+    ("r/finansial", "site:reddit.com/r/finansial intitle:(penipu OR penipuan OR pinjol OR phishing OR scam OR rekening)"),
+    ("r/indotech", "site:reddit.com/r/indotech intitle:(penipu OR penipuan OR spam OR phishing OR scam OR apk)"),
+    ("r/Scams (ID)", "site:reddit.com/r/Scams (Indonesia OR WhatsApp OR APK) intitle:(scam OR phishing OR smishing OR WhatsApp)"),
 ]
 
 MAX_STATE = 1000
@@ -29,6 +29,16 @@ REPORT_FILE = Path("reddit_report.md")
 
 # Nomor HP Indonesia: 08xx / 628xx / +628xx (10-14 digit)
 RE_PHONE = re.compile(r"(?<![\d+])(?:\+62|62|0)8[1-9](?:[ .\-]?\d){6,10}(?!\d)")
+
+# Gerbang wajib: judul postingan HARUS mengandung minimal 1 kata kunci relevan
+RE_RELEVANT = re.compile(
+    r"(?i)\b("
+    r"penipu\w*|scam\w*|pinjol|judol|judi|slot|gacor|"
+    r"phishing|smishing|malware|apk|spam\w*|telemarket\w*|"
+    r"otp|kurir|resi|tilang|dana\s*kaget|investasi\s*bodong|"
+    r"loker\s*fiktif|blokir\s*rekening|hack\w*|bocor"
+    r")\b"
+)
 
 
 def normalisasi(nomor: str) -> str:
@@ -60,7 +70,7 @@ def fetch_google_bridge(label: str, query: str) -> list[dict] | None:
     req = urllib.request.Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-Radar/4.0; +https://github.com/lonion-1/WhaleGuard)",
+            "User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-Radar/4.1; +https://github.com/lonion-1/WhaleGuard)",
             "Accept": "application/rss+xml, application/xml, text/xml",
         },
     )
@@ -78,23 +88,27 @@ def fetch_google_bridge(label: str, query: str) -> list[dict] | None:
         return None
 
     items = root.findall(".//item")
-    print(f"[OK] {label} -> {len(items)} hasil terindeks.")
-
     hasil = []
     for it in items:
         title_raw = (it.findtext("title") or "").strip()
-        title = re.sub(r"\s*-\s*Reddit\s*$", "", title_raw, flags=re.IGNORECASE)
+        title = re.sub(r"\s*-\s*Reddit\s*$", "", title_raw, flags=re.IGNORECASE).strip()
         link = (it.findtext("link") or "").strip()
         guid = (it.findtext("guid") or link).strip()
         desc = bersihkan_html(it.findtext("description") or "")
 
+        # Buang halaman indeks subreddit kosong atau judul di luar topik penipuan/spam
+        if not title or title.lower().startswith("r/") or not RE_RELEVANT.search(title):
+            continue
+
         if guid and link:
             hasil.append({
                 "id": f"gn:{guid}",
-                "title": title or "(Tanpa Judul)",
+                "title": title,
                 "url": link,
                 "text": desc,
             })
+
+    print(f"[OK] {label} -> {len(hasil)} postingan relevan (dari {len(items)} indeks).")
     return hasil
 
 
@@ -156,7 +170,7 @@ def main() -> int:
         return 1
 
     if not temuan_nomor and not modus_tampil:
-        print("Radar Reddit: tidak ada laporan baru.")
+        print("Radar Reddit: tidak ada laporan baru yang relevan.")
         set_output(False)
         return 0
 
