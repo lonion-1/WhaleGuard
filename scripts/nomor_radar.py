@@ -1,11 +1,14 @@
 # Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Licensed under the GNU Affero General Public License v3.0.
-"""WhaleGuard Unified Radar v7.2 (Telegram Deep-Scroll Pagination + Bing Telegram RSS).
+"""WhaleGuard Unified Radar v8.0 (Auto-Discovery Snowball + Directory Indexing + Pagination).
 
-Sumber pencarian:
-1. Telegram Public Channel Web Preview (https://t.me/s/<channel>) dengan pagination ?before=.
-2. Bing Web Search RSS (?format=rss) khusus indeks publik site:t.me/s/.
+Fitur Otomatisasi Penuh:
+1. Memindai kanal seed + kanal temuan otomatis (.github/discovered_channels.json) hingga 5 halaman ke belakang.
+2. Snowball Discovery: mengekstrak @username & tautan t.me/... dari pesan laporan penipuan.
+3. Directory Indexing: mencari kanal baru dari katalog pencarian publik Telegram.
+4. Verifikasi otomatis: hanya menyimpan kanal publik aktif berbahasa Indonesia bertema penipuan/pinjol.
+5. Self-Pruning: otomatis menghapus kanal temuan yang tidak aktif setelah 3x gagal/kosong.
 """
 import hashlib
 import html
@@ -16,31 +19,54 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
-TELEGRAM_CHANNELS = [
+SEED_CHANNELS = [
     "rekampenipu",
     "cekrekening",
     "scamdetector_id",
-    "Informasi_DariAnda",
-    "blacklist_ent_indonesia",
-    "notoscam",
-    "Kredivo_LaporanPenipuan",
 ]
 
-BING_WEB_TARGETS = [
-    ("Bing -> Telegram Penipu", 'site:t.me/s/ ("nomor penipu" OR "no penipu" OR "wa penipu" OR penipuan)'),
-    ("Bing -> Telegram Pinjol", 'site:t.me/s/ (pinjol OR galbay OR "debt collector" OR "undangan apk")'),
+DIRECTORY_QUERIES = [
+    "https://lyzem.com/search?q=penipu",
+    "https://lyzem.com/search?q=pinjol",
+    "https://lyzem.com/search?q=scam+indonesia",
 ]
 
-MAX_STATE = 3500
+MAX_STATE = 4000
+MAX_ACTIVE_CHANNELS = 35
+MAX_VERIFY_PER_RUN = 10
+MAX_REJECTED = 600
+
 STATE_FILE = Path(".github/nomor_radar_seen.json")
+DISCOVERY_FILE = Path(".github/discovered_channels.json")
 RULES_FILE = Path("rules/numbers-spam-id.txt")
 ALLOWLIST_FILE = Path("rules/numbers-allowlist.txt")
 
 RE_PHONE = re.compile(r"(?<![\d+])(?:\+62|62|0)8[1-9](?:[ .\-]?\d){6,10}(?!\d)")
-RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)(8\d{8,11})\$?$")
+RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)([2-9]\d{7,11})\$?$")
+
+# Pola username Telegram valid (5-32 karakter) dari URL t.me/ atau @mention
+RE_TG_MENTION = re.compile(
+    r"(?:(?:https?://)?(?:t\.me|telegram\.me)/(?:s/)?|@)([a-zA-Z][a-zA-Z0-9_]{4,31})\b"
+)
+
+RESERVED_TG_NAMES = {
+    "joinchat", "addstickers", "addtheme", "setlanguage", "share", "proxy",
+    "socks", "confirmphone", "iv", "login", "contact", "support", "telegram",
+    "admin", "channel", "group", "botfather", "spaminfo", "cekrekening_bot",
+}
+
+# Validasi relevansi kanal baru (harus bertema penipuan/pinjol & berbahasa Indonesia)
+RE_CHANNEL_RELEVANCE = re.compile(
+    r"(?i)\b("
+    r"penipu\w*|nipu|scam\w*|pinjol|galbay|debt\s*collector|teror\w*|"
+    r"blacklist|cek\s*rekening|rekber|waspada|korban|lapor\w*|judol|phishing"
+    r")\b"
+)
+RE_INDONESIAN_HINT = re.compile(
+    r"(?i)\b(yang|dan|ini|itu|tidak|ada|korban|nomor|rekening|uang|rp|akun|waspada)\b"
+)
 
 # Kata kunci bukti kuat yang HARUS muncul dalam jarak ±55 karakter dari nomor telepon
 RE_PROXIMITY_SCAM = re.compile(
@@ -53,7 +79,6 @@ RE_PROXIMITY_SCAM = re.compile(
     r")"
 )
 
-# Tolak jika tepat di dekat nomor (±45 karakter) tercantum sebagai CS/kurir resmi
 RE_OFFICIAL_CS_NOISE = re.compile(
     r"(?i)\b("
     r"call\s*center|cs\s*resmi|customer\s*service|layanan\s*pengaduan|"
@@ -61,7 +86,6 @@ RE_OFFICIAL_CS_NOISE = re.compile(
     r")\b"
 )
 
-# Ciri iklan jual-beli biasa (dibuang kecuali ada bukti penipuan eksplisit)
 RE_COMMERCIAL_NOISE = re.compile(
     r"(?i)\b("
     r"dijual|jual\s*cepat|harga\s*nego|nego\s*di\s*tempat|cek\s*unit|"
@@ -78,11 +102,6 @@ DUMMY_NUMBERS = {
     "0812345678", "08123456789", "081234567890", "0812345678901",
     "08987654321", "081122334455",
 }
-
-
-def buat_id_stabil(prefix: str, kunci: str) -> str:
-    digest = hashlib.sha256(kunci.encode("utf-8")).hexdigest()[:16]
-    return f"{prefix}:{digest}"
 
 
 def normalisasi(nomor: str) -> str | None:
@@ -137,6 +156,82 @@ def http_get(url: str) -> str | None:
         return None
 
 
+def muat_discovery_state() -> dict:
+    default = {
+        "channels": {ch: {"misses": 0, "source": "seed"} for ch in SEED_CHANNELS},
+        "rejected": [],
+    }
+    if not DISCOVERY_FILE.exists():
+        return default
+    try:
+        data = json.loads(DISCOVERY_FILE.read_text(encoding="utf-8"))
+        channels = data.get("channels", {})
+        for ch in SEED_CHANNELS:
+            if ch not in channels:
+                channels[ch] = {"misses": 0, "source": "seed"}
+        return {
+            "channels": channels,
+            "rejected": list(data.get("rejected", []))[-MAX_REJECTED:],
+        }
+    except Exception:
+        return default
+
+
+def simpan_discovery_state(state: dict) -> None:
+    DISCOVERY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    state["rejected"] = list(dict.fromkeys(state["rejected"]))[-MAX_REJECTED:]
+    DISCOVERY_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def ekstrak_kandidat_username(teks: str) -> set[str]:
+    kandidat: set[str] = set()
+    for m in RE_TG_MENTION.finditer(teks):
+        uname = m.group(1)
+        low = uname.lower()
+        if low in RESERVED_TG_NAMES or low.endswith("bot"):
+            continue
+        kandidat.add(uname)
+    return kandidat
+
+
+def verifikasi_kanal_publik(username: str) -> bool:
+    """Cek apakah username adalah Public Channel aktif berbahasa Indonesia bertema penipuan/pinjol."""
+    url = f"https://t.me/s/{username}"
+    raw = http_get(url)
+    if not raw or "tgme_widget_message_text" not in raw:
+        return False
+
+    title_m = re.search(r'class="tgme_channel_info_header_title"[^>]*>([\s\S]*?)</div>', raw)
+    desc_m = re.search(r'class="tgme_channel_info_description"[^>]*>([\s\S]*?)</div>', raw)
+    msgs = re.findall(r'<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)</div>', raw)
+
+    if len(msgs) < 3:
+        return False
+
+    sampel_teks = " ".join([
+        bersihkan_html(title_m.group(1)) if title_m else "",
+        bersihkan_html(desc_m.group(1)) if desc_m else "",
+        *[bersihkan_html(x) for x in msgs[-10:]],
+    ])
+
+    has_topic = bool(RE_CHANNEL_RELEVANCE.search(sampel_teks))
+    has_id_lang = len(RE_INDONESIAN_HINT.findall(sampel_teks)) >= 3
+    return has_topic and has_id_lang
+
+
+def fetch_directory_candidates() -> set[str]:
+    """Cari kandidat username kanal dari direktori publik Telegram."""
+    kandidat: set[str] = set()
+    for url in DIRECTORY_QUERIES:
+        raw = http_get(url)
+        if raw:
+            found = ekstrak_kandidat_username(raw)
+            print(f"[DISCOVERY] Direktori {url.split('=')[-1]}: {len(found)} kandidat mentah")
+            kandidat.update(found)
+        time.sleep(1.5)
+    return kandidat
+
+
 def fetch_telegram_channel(channel: str, max_pages: int = 5) -> list[dict]:
     hasil = []
     seen_local: set[str] = set()
@@ -180,33 +275,6 @@ def fetch_telegram_channel(channel: str, max_pages: int = 5) -> list[dict]:
     return hasil
 
 
-def fetch_bing_rss(label: str, query: str) -> list[dict]:
-    encoded = urllib.parse.quote(query)
-    url = f"https://www.bing.com/search?q={encoded}&format=rss"
-    raw = http_get(url)
-    if not raw:
-        return []
-    try:
-        root = ET.fromstring(raw)
-    except ET.ParseError as e:
-        print(f"[WARN] Gagal parse XML {label}: {e}")
-        return []
-
-    hasil = []
-    for it in root.findall(".//item"):
-        title = bersihkan_html(it.findtext("title") or "")
-        link = (it.findtext("link") or "").strip()
-        desc = bersihkan_html(it.findtext("description") or "")
-        if title or desc:
-            hasil.append({
-                "id": buat_id_stabil("bing", link or f"{title}:{desc}"),
-                "source": label,
-                "title": title,
-                "text": desc,
-            })
-    return hasil
-
-
 def ekstrak_nomor_valid(teks: str, diabaikan: set[str]) -> set[str]:
     if RE_COMMERCIAL_NOISE.search(teks) and not RE_EXPLICIT_REPORT.search(teks):
         return set()
@@ -241,33 +309,81 @@ def main() -> int:
             seen_list = []
     seen = set(seen_list)
 
-    semua_post: list[dict] = []
+    discovery = muat_discovery_state()
+    channels_map: dict = discovery["channels"]
+    rejected_set: set[str] = {x.lower() for x in discovery["rejected"]}
+    known_lower: set[str] = {k.lower() for k in channels_map}
 
-    for ch in TELEGRAM_CHANNELS:
+    semua_post: list[dict] = []
+    snowball_candidates: set[str] = set()
+    channels_to_prune: list[str] = []
+
+    # 1. Pindai semua kanal aktif (Seed + Discovered)
+    for ch, meta in list(channels_map.items()):
         items = fetch_telegram_channel(ch, max_pages=5)
-        print(f"[INFO] Telegram @{ch}: {len(items)} pesan")
-        semua_post.extend(items)
+        print(f"[INFO] Telegram @{ch} ({meta.get('source', 'auto')}): {len(items)} pesan")
+
+        if items:
+            meta["misses"] = 0
+            semua_post.extend(items)
+        else:
+            meta["misses"] = meta.get("misses", 0) + 1
+            if ch not in SEED_CHANNELS and meta["misses"] >= 3:
+                channels_to_prune.append(ch)
+
         time.sleep(1.0)
 
-    for label, q in BING_WEB_TARGETS:
-        items = fetch_bing_rss(label, q)
-        print(f"[INFO] {label}: {len(items)} hasil")
-        semua_post.extend(items)
-        time.sleep(1.5)
+    for ch in channels_to_prune:
+        print(f"[PRUNE] Menghapus kanal tidak aktif: @{ch}")
+        channels_map.pop(ch, None)
 
+    # 2. Panen nomor baru + kumpulkan kandidat kanal dari isi pesan (Snowball)
     nomor_baru: set[str] = set()
     for post in semua_post:
+        gabungan = f"{post['title']} | {post['text']}"
+
+        # Kumpulkan @username / t.me/... dari pesan yang relevan dengan penipuan
+        if RE_CHANNEL_RELEVANCE.search(gabungan):
+            snowball_candidates.update(ekstrak_kandidat_username(gabungan))
+
         sid = post["id"]
         if sid in seen:
             continue
         seen.add(sid)
         seen_list.append(sid)
 
-        gabungan = f"{post['title']} | {post['text']}"
         ditemukan = ekstrak_nomor_valid(gabungan, diabaikan | nomor_baru)
         if ditemukan:
-            print(f"[+{len(ditemukan)}] {post['source']}: {', '.join(sorted(ditemukan))} <- {post['title'][:80]}")
+            print(f"[+{len(ditemukan)}] {post['source']}: {', '.join(sorted(ditemukan))} <- {post['title'][:75]}")
             nomor_baru.update(ditemukan)
+
+    # 3. Auto-Discovery kanal baru (Snowball + Direktori) jika slot masih tersedia
+    if len(channels_map) < MAX_ACTIVE_CHANNELS:
+        dir_candidates = fetch_directory_candidates()
+        kandidat_baru = [
+            u for u in (snowball_candidates | dir_candidates)
+            if u.lower() not in known_lower and u.lower() not in rejected_set
+        ]
+
+        verified_count = 0
+        for cand in kandidat_baru[:MAX_VERIFY_PER_RUN]:
+            if len(channels_map) >= MAX_ACTIVE_CHANNELS:
+                break
+            src = "snowball" if cand in snowball_candidates else "directory"
+            if verifikasi_kanal_publik(cand):
+                channels_map[cand] = {"misses": 0, "source": src}
+                known_lower.add(cand.lower())
+                verified_count += 1
+                print(f"[NEW CHANNEL] Kanal baru terverifikasi ({src}): @{cand}")
+            else:
+                discovery["rejected"].append(cand)
+                rejected_set.add(cand.lower())
+            time.sleep(1.2)
+
+        if verified_count:
+            print(f"[DISCOVERY SUKSES] {verified_count} kanal baru ditambahkan ke daftar pantau.")
+
+    simpan_discovery_state(discovery)
 
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(json.dumps(seen_list[-MAX_STATE:], indent=2) + "\n", encoding="utf-8")
