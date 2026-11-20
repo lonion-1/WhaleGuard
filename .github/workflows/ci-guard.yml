@@ -1,7 +1,6 @@
 name: Validasi & Rapikan Aturan WhaleGuard
 # Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Licensed under the GNU Affero General Public License v3.0.
 
 on:
   push:
@@ -17,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: whaleguard-ci
+  group: whaleguard-rules
   cancel-in-progress: false
 
 jobs:
@@ -29,7 +28,7 @@ jobs:
       - name: Ambil isi repo
         uses: actions/checkout@v4
 
-      - name: Jalankan Validator Regex & Simulator OTP
+      - name: Jalankan Validator Regex, Allowlist & Simulator OTP
         run: python3 scripts/validate_and_build.py
 
       - name: Simpan hasil rapi ke GitHub
@@ -46,6 +45,7 @@ jobs:
             if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
               exit 0
             fi
+            git rebase --abort 2>/dev/null || true
             sleep 5
           done
           exit 1
