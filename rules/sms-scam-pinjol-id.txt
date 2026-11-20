@@ -1,0 +1,10 @@
+! Title: WhaleGuard - Filter SMS Penipuan, Malware .APK & Pinjol Ilegal
+! Copyright (c) 2026 <EazyWhale>
+! License: GNU General Public License v3.0 (GPL-3.0)
+! Maintainer: EazyWhale
+! --------------------------------------------------
+
+(?i).*\.(apk)\b.*
+(?i)\b(pinjaman\s*online|dana\s*tunai\s*cepat|limit\s*pinjaman\s*anda\s*(disetujui|cair)|tanpa\s*agunan\s*&\s*bi\s*checking|cair\s*dalam\s*\d+\s*menit)\b
+(?i)\b(paket\s*anda\s*(tertahan|gagal\s*kirim).*klik|cek\s*resi\s*anda\s*di\s*sini.*\.apk|undangan\s*pernikahan\s*digital.*\.apk)\b
+(?i)\b(selamat\s*anda\s*(memenangkan|terpilih\s*mendapatkan)\s*(hadiah|uang\s*tunai|iphone|mobil).*klik)\b
