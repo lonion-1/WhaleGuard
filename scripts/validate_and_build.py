@@ -18,6 +18,7 @@ SMS_BLOCK_FILES = {
 SMS_ALLOW_FILE = ("rules/sms-allowlist-otp.txt", "WhaleGuard - Pengecualian SMS OTP, Perbankan & Kurir Resmi")
 NUMBER_BLOCK_FILE = ("rules/numbers-spam-id.txt", "WhaleGuard - Daftar Nomor Spam & Penipu Terverifikasi (Indonesia)")
 NUMBER_ALLOW_FILE = Path("rules/numbers-allowlist.txt")
+PLAIN_NUMBER_FILE = "rules/numbers-spam-id-plain.txt"
 
 SAFE_SMS_SAMPLES = [
     "Kode OTP Anda adalah 849201. JANGAN BERIKAN kode ini kepada siapapun termasuk pihak bank.",
@@ -213,6 +214,26 @@ def proses_number_file(file_str: str, title: str, summary: list[str]):
     return len(unik)
 
 
+def tulis_plain_numbers(regex_rules: list[str], summary: list[str]) -> int:
+    """Ekspor daftar nomor spam ke format internasional polos (+62...) untuk iOS & dialer umum."""
+    plain_path = Path(PLAIN_NUMBER_FILE)
+    plain_numbers: list[str] = []
+
+    for r in regex_rules:
+        m = RE_EXISTING_RULE.match(r)
+        if m:
+            plain_numbers.append("+62" + m.group(1))
+
+    plain_numbers.sort()
+    tulis_file(
+        plain_path,
+        "WhaleGuard - Daftar Nomor Spam Polos (+62) untuk iOS & Dialer Umum",
+        plain_numbers,
+    )
+    summary.append(f"- **{plain_path.as_posix()}**: **{len(plain_numbers)}** nomor polos aktif (iOS/Universal)")
+    return len(plain_numbers)
+
+
 def update_readme(counts: dict[str, int]):
     readme_path = Path("README.md")
     if not readme_path.exists():
@@ -238,6 +259,13 @@ def main():
 
     num_path, num_title = NUMBER_BLOCK_FILE
     counts[num_path] = proses_number_file(num_path, num_title, summary=summary)
+
+    # Auto-generate versi polos (+62...) untuk iOS & dialer umum
+    regex_aktif = [
+        l.strip() for l in Path(num_path).read_text(encoding="utf-8").splitlines()
+        if l.strip() and not l.strip().startswith("!")
+    ]
+    counts[PLAIN_NUMBER_FILE] = tulis_plain_numbers(regex_aktif, summary)
 
     update_readme(counts)
     Path("last-run.txt").write_text(f"Last check (UTC): {WAKTU}\n", encoding="utf-8")
