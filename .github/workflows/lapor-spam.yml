@@ -1,7 +1,6 @@
-name: Auto-Check & Process Spam Report (WhaleGuard)
+name: Community Report & Allowlist Autopilot (WhaleGuard)
 # Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Licensed under the GNU Affero General Public License v3.0.
 
 on:
   issues:
@@ -12,19 +11,24 @@ permissions:
   issues: write
 
 concurrency:
-  group: whaleguard-ci
+  group: whaleguard-rules
   cancel-in-progress: false
 
 jobs:
-  process-spam-report:
+  process-community-report:
     if: >
+      github.actor != 'github-actions[bot]' &&
       (
         contains(github.event.issue.labels.*.name, 'lapor-spam') ||
-        startsWith(github.event.issue.title, '[Lapor Spam]:')
+        contains(github.event.issue.labels.*.name, 'allowlist') ||
+        contains(github.event.issue.labels.*.name, 'salah-blokir') ||
+        startsWith(github.event.issue.title, '[Lapor Spam]:') ||
+        startsWith(github.event.issue.title, '[Salah Blokir]:') ||
+        startsWith(github.event.issue.title, '[Allowlist]:')
       ) &&
       (
         github.event.action == 'opened' ||
-        (github.event.action == 'labeled' && github.event.label.name == 'approved')
+        (github.event.action == 'labeled' && (github.event.label.name == 'approved' || github.event.label.name == 'allowlist'))
       )
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -32,9 +36,10 @@ jobs:
       - name: Checkout repo WhaleGuard
         uses: actions/checkout@v4
 
-      - name: Periksa cakupan aturan & proses laporan
+      - name: Proses laporan spam / allowlist komunitas
         id: check
         env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_USER: ${{ github.event.issue.user.login }}
           REPO_OWNER: ${{ github.repository_owner }}
@@ -45,6 +50,7 @@ jobs:
           import os, re, subprocess, sys
           from pathlib import Path
 
+          title = os.environ.get("ISSUE_TITLE", "")
           body = os.environ.get("ISSUE_BODY", "")
           issue_user = os.environ.get("ISSUE_USER", "")
           repo_owner = os.environ.get("REPO_OWNER", "")
@@ -52,9 +58,36 @@ jobs:
           label = os.environ.get("EVENT_LABEL", "")
           gh_out = os.environ["GITHUB_OUTPUT"]
 
+          RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)([2-9]\d{6,11})\$?$")
+
           def out(k, v):
               with open(gh_out, "a", encoding="utf-8") as f:
                   f.write(f"{k}<<EOF\n{v}\nEOF\n")
+
+          def normalisasi_nomor(raw: str) -> str | None:
+              bersih = re.sub(r"[\s\-().]", "", raw.strip())
+              if not re.fullmatch(r"(?:\+?62|62|0)[2-9][0-9]{6,12}", bersih):
+                  return None
+              if bersih.startswith("+62"):
+                  return "0" + bersih[3:]
+              if bersih.startswith("62"):
+                  return "0" + bersih[2:]
+              return bersih
+
+          def muat_daftar_nomor(path: Path) -> set[str]:
+              hasil = set()
+              if not path.exists():
+                  return hasil
+              for line in path.read_text(encoding="utf-8").splitlines():
+                  s = line.split("#", 1)[0].strip()
+                  if not s or s.startswith("!"):
+                      continue
+                  m = RE_EXISTING_RULE.match(s)
+                  if m:
+                      hasil.add("0" + m.group(1))
+                  elif (norm := normalisasi_nomor(s)) is not None:
+                      hasil.add(norm)
+              return hasil
 
           def load_patterns(path: Path):
               pats = []
@@ -62,7 +95,7 @@ jobs:
                   return pats
               for l in path.read_text(encoding="utf-8").splitlines():
                   s = l.strip()
-                  if not s or s.startswith("!"):
+                  if not s or s.startswith(("!", "#")):
                       continue
                   try:
                       pats.append((s, re.compile(s)))
@@ -85,53 +118,116 @@ jobs:
               if l.strip() and l.strip() != "_No response_"
           ]
 
+          # Fallback jika user mengisi form tanpa header template standar
           if not raw_items:
-              out("reply_msg", "❌ **Isian kosong.** Silakan masukkan nomor telepon atau contoh SMS/regex spam.")
+              raw_items = [l.strip() for l in body.splitlines() if l.strip() and not l.startswith("#")]
+
+          if not raw_items:
+              out("reply_msg", "❌ **Isian kosong.** Silakan masukkan nomor telepon atau contoh SMS/regex.")
               out("should_close", "false")
               out("file_updated", "false")
               sys.exit(0)
 
-          is_approved_or_owner = (issue_user == repo_owner) or (action == "labeled" and label == "approved")
+          is_owner = (issue_user == repo_owner)
+          is_allowlist_req = (
+              "Salah Blokir" in jenis
+              or "Allowlist" in jenis
+              or title.startswith(("[Salah Blokir]:", "[Allowlist]:"))
+              or (action == "labeled" and label == "allowlist")
+          )
+
           file_updated = False
           blocks = []
 
-          # JALUR 1: LAPOR NOMOR TELEPON
-          if "Nomor Telepon" in jenis:
+          # JALUR 1: LAPOR SALAH BLOKIR (COMMUNITY ALLOWLIST)
+          if is_allowlist_req:
+              allow_file = Path("rules/numbers-allowlist.txt")
+              existing_allow = muat_daftar_nomor(allow_file)
+              valid_nums = []
+              already_allowed = []
+              invalid_nums = []
+
+              for item in raw_items:
+                  norm = normalisasi_nomor(item)
+                  if not norm:
+                      invalid_nums.append(item)
+                  elif norm in existing_allow:
+                      already_allowed.append(norm)
+                  elif norm not in valid_nums:
+                      valid_nums.append(norm)
+
+              if already_allowed:
+                  blocks.append("ℹ️ **Nomor Sudah Ada di Allowlist (`rules/numbers-allowlist.txt`):** " + ", ".join(f"`{n}`" for n in already_allowed))
+
+              can_apply_allowlist = is_owner or (action == "labeled" and label == "allowlist")
+              if valid_nums:
+                  if can_apply_allowlist:
+                      isi = allow_file.read_text(encoding="utf-8") if allow_file.exists() else ""
+                      allow_file.parent.mkdir(parents=True, exist_ok=True)
+                      allow_file.write_text(isi.rstrip() + "\n" + "\n".join(valid_nums) + "\n", encoding="utf-8")
+                      subprocess.run(["python3", "scripts/validate_and_build.py"], check=True)
+                      file_updated = True
+                      blocks.append(
+                          "✅ **Berhasil Masuk Allowlist & Dihapus dari Daftar Blokir:**\n"
+                          + "\n".join(f"* `{n}`" for n in valid_nums)
+                      )
+                  else:
+                      blocks.append(
+                          "⏳ **Permintaan Allowlist Diterima — Menunggu Verifikasi Maintainer (label `allowlist`):**\n"
+                          + "\n".join(f"* `{n}`" for n in valid_nums)
+                      )
+
+              if invalid_nums:
+                  blocks.append("⚠️ **Format nomor tidak dikenali (gunakan `08...` atau `+628...`):** " + ", ".join(f"`{x}`" for x in invalid_nums))
+
+              should_close = (len(valid_nums) == 0) or can_apply_allowlist
+
+          # JALUR 2: LAPOR NOMOR TELEPON SPAM (FULL-AUTO MASUK)
+          elif "Nomor Telepon" in jenis or all(normalisasi_nomor(x) is not None for x in raw_items):
               num_file = Path("rules/numbers-spam-id.txt")
+              allow_nums = muat_daftar_nomor(Path("rules/numbers-allowlist.txt"))
               existing_pats = load_patterns(num_file)
+
+              protected_nums = []
               already_blocked = []
               new_numbers = []
               invalid_nums = []
 
               for item in raw_items:
-                  bersih = re.sub(r"[\s\-().]", "", item)
-                  if not re.fullmatch(r"(?:\+?62|0)[2-9][0-9]{6,12}", bersih):
+                  norm = normalisasi_nomor(item)
+                  if not norm:
                       invalid_nums.append(item)
                       continue
-                  if any(rx.search(bersih) for _, rx in existing_pats):
-                      already_blocked.append(item)
-                  elif bersih not in new_numbers:
-                      new_numbers.append(bersih)
+                  if norm in allow_nums:
+                      protected_nums.append(norm)
+                  elif any(rx.search(norm) for _, rx in existing_pats):
+                      already_blocked.append(norm)
+                  elif norm not in new_numbers:
+                      new_numbers.append(norm)
+
+              if protected_nums:
+                  blocks.append("🛡️ **Ditolak Otomatis (Nomor Dilindungi Allowlist Resmi):** " + ", ".join(f"`{n}`" for n in protected_nums))
 
               if already_blocked:
                   blocks.append("ℹ️ **Nomor Sudah Tercakup di `rules/numbers-spam-id.txt`:** " + ", ".join(f"`{n}`" for n in already_blocked))
 
               if new_numbers:
-                  if is_approved_or_owner:
-                      isi = num_file.read_text(encoding="utf-8") if num_file.exists() else ""
-                      num_file.write_text(isi.rstrip() + "\n" + "\n".join(new_numbers) + "\n", encoding="utf-8")
-                      subprocess.run(["python3", "scripts/validate_and_build.py"], check=True)
-                      file_updated = True
-                      blocks.append("✅ **Berhasil Ditambahkan ke `rules/numbers-spam-id.txt`:**\n" + "\n".join(f"* `{n}`" for n in new_numbers))
-                  else:
-                      blocks.append("⏳ **Nomor Baru Terdeteksi — Menunggu Persetujuan Maintainer (`approved`):**\n" + "\n".join(f"* `{n}`" for n in new_numbers))
+                  isi = num_file.read_text(encoding="utf-8") if num_file.exists() else ""
+                  num_file.parent.mkdir(parents=True, exist_ok=True)
+                  num_file.write_text(isi.rstrip() + "\n" + "\n".join(new_numbers) + "\n", encoding="utf-8")
+                  subprocess.run(["python3", "scripts/validate_and_build.py"], check=True)
+                  file_updated = True
+                  blocks.append(
+                      "✅ **Autopilot: Nomor Spam Langsung Ditambahkan ke `rules/numbers-spam-id.txt`:**\n"
+                      + "\n".join(f"* `{n}`" for n in new_numbers)
+                  )
 
               if invalid_nums:
-                  blocks.append("⚠️ **Format nomor tidak dikenali (gunakan format Indonesia `08...` atau `+628...`):** " + ", ".join(f"`{x}`" for x in invalid_nums))
+                  blocks.append("⚠️ **Format nomor tidak dikenali (gunakan `08...`, `628...`, atau `+628...`):** " + ", ".join(f"`{x}`" for x in invalid_nums))
 
-              should_close = (len(new_numbers) == 0) or is_approved_or_owner
+              should_close = True
 
-          # JALUR 2: LAPOR SMS JUDOL / SCAM
+          # JALUR 3: LAPOR SMS JUDOL / SCAM (CEK OTOMATIS + APPROVAL REGEX)
           else:
               target_file = Path("rules/sms-judol-id.txt") if "Judol" in jenis else Path("rules/sms-scam-pinjol-id.txt")
               all_sms_pats = load_patterns(Path("rules/sms-judol-id.txt")) + load_patterns(Path("rules/sms-scam-pinjol-id.txt"))
@@ -151,12 +247,14 @@ jobs:
                       + "\n".join(f"* `{x[:80]}{'...' if len(x) > 80 else ''}`" for x in sudah_tertangkap)
                   )
 
+              is_approved = is_owner or (action == "labeled" and label == "approved")
               if lolos_filter:
-                  # Jika user/owner mengirim langsung pola regex (diawali '(?i)' atau '^') dan sudah disetujui
                   valid_regexes = []
                   sample_texts = []
                   for x in lolos_filter:
-                      if x.startswith(("(?i)", "^", "\\b")):
+                      # Jika sudah approved/owner atau diawali token regex, coba kompilasi sebagai pola regex
+                      looks_like_regex = x.startswith(("(?i)", "^", "\\b", "(?:")) or (is_approved and any(c in x for c in "[]()*+?\\|"))
+                      if looks_like_regex:
                           try:
                               re.compile(x)
                               valid_regexes.append(x)
@@ -165,7 +263,7 @@ jobs:
                               pass
                       sample_texts.append(x)
 
-                  if is_approved_or_owner and valid_regexes:
+                  if is_approved and valid_regexes:
                       isi = target_file.read_text(encoding="utf-8") if target_file.exists() else ""
                       target_file.write_text(isi.rstrip() + "\n" + "\n".join(valid_regexes) + "\n", encoding="utf-8")
                       subprocess.run(["python3", "scripts/validate_and_build.py"], check=True)
@@ -176,7 +274,7 @@ jobs:
                   if lolos_filter:
                       blocks.append(
                           f"⏳ **Sampel SMS Baru Lolos dari Filter (Target: `{target_file.as_posix()}`):**\n"
-                          "Menunggu **EazyWhale** meracik pola regex anti-*false positive* dan memberi label `approved`:\n"
+                          "Menunggu **EazyWhale** menambahkan pola regex anti-*false positive* dan memberi label `approved`:\n"
                           + "\n".join(f"* `{x[:100]}{'...' if len(x) > 100 else ''}`" for x in lolos_filter)
                       )
 
@@ -194,11 +292,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add rules/ README.md last-run.txt
           if ! git diff --staged --quiet; then
-            git commit -m "feat(rules): add reported spam rules (#${{ github.event.issue.number }})"
+            git commit -m "feat(rules): process community report (#${{ github.event.issue.number }}) [skip ci]"
             for i in 1 2 3; do
               if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
                 exit 0
               fi
+              git rebase --abort 2>/dev/null || true
               sleep 5
             done
             exit 1
