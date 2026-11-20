@@ -17,8 +17,8 @@ SMS_BLOCK_FILES = {
 }
 SMS_ALLOW_FILE = ("rules/sms-allowlist-otp.txt", "WhaleGuard - Pengecualian SMS OTP, Perbankan & Kurir Resmi")
 NUMBER_BLOCK_FILE = ("rules/numbers-spam-id.txt", "WhaleGuard - Daftar Nomor Spam & Penipu Terverifikasi (Indonesia)")
+NUMBER_ALLOW_FILE = Path("rules/numbers-allowlist.txt")
 
-# Sampel SMS sah yang HARAM terblokir oleh aturan blocklist
 SAFE_SMS_SAMPLES = [
     "Kode OTP Anda adalah 849201. JANGAN BERIKAN kode ini kepada siapapun termasuk pihak bank.",
     "BCA: Transaksi berhasil Rp 250.000 pada 20/11/2026. Info hubungi Halo BCA 1500888.",
@@ -29,14 +29,12 @@ SAFE_SMS_SAMPLES = [
     "BRI: Pembayaran QRIS sebesar Rp 45.000 berhasil.",
 ]
 
-# Sampel SMS spam yang HARAM lolos masuk ke allowlist
 SPAM_SMS_SAMPLES = [
     "Info slot gacor hari ini maxwin zeus x500 deposit pulsa tanpa potongan!",
     "Undangan pernikahan digital silakan buka file Undangan_Resmi.apk",
     "Pinjaman online dana tunai cepat limit pinjaman anda disetujui tanpa agunan!",
 ]
 
-# Nomor darurat & call center resmi yang dilindungi dari pemblokiran
 SAFE_NUMBERS = [
     "110", "112", "113", "118", "119",
     "1500888", "0211500888", "+62211500888",
@@ -54,18 +52,33 @@ HEADER_PREFIXES = (
     "! --------------------------------------------------",
 )
 
+RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)([2-9][0-9]{6,11})\$?$")
+
 
 def normalisasi_nomor_id(raw: str) -> str:
     """Ubah nomor telepon Indonesia polos menjadi regex universal (+62/62/0)."""
     s = raw.strip()
     bersih = re.sub(r"[\s\-().]", "", s)
-    if re.fullmatch(r"(?:\+?62|0)8[1-9][0-9]{6,11}", bersih):
-        inti = re.sub(r"^(?:\+?62|0)", "", bersih)
+    if re.fullmatch(r"(?:\+?62|62|0)8[1-9][0-9]{6,11}", bersih):
+        inti = re.sub(r"^(?:\+?62|62|0)", "", bersih)
         return rf"^(\+62|62|0){inti}$"
-    if re.fullmatch(r"(?:\+?62|0)[2-9][0-9]{7,10}", bersih):
-        inti = re.sub(r"^(?:\+?62|0)", "", bersih)
+    if re.fullmatch(r"(?:\+?62|62|0)[2-9][0-9]{7,10}", bersih):
+        inti = re.sub(r"^(?:\+?62|62|0)", "", bersih)
         return rf"^(\+62|62|0){inti}$"
     return s
+
+
+def muat_allowlist_regex() -> set[str]:
+    """Kumpulkan semua nomor di rules/numbers-allowlist.txt dalam bentuk regex baku."""
+    allowed_regexes: set[str] = set()
+    if not NUMBER_ALLOW_FILE.exists():
+        return allowed_regexes
+    for line in NUMBER_ALLOW_FILE.read_text(encoding="utf-8").splitlines():
+        s = line.split("#", 1)[0].strip()
+        if not s or s.startswith("!"):
+            continue
+        allowed_regexes.add(normalisasi_nomor_id(s))
+    return allowed_regexes
 
 
 def fmt_angka(n: int) -> str:
@@ -108,20 +121,17 @@ def proses_sms_file(file_str: str, title: str, is_allowlist: bool, summary: list
 
     for no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         s = line.strip()
-        if not s or s.startswith(HEADER_PREFIXES) or s.startswith("!"):
+        if not s or s.startswith(HEADER_PREFIXES) or s.startswith(("!", "#")):
             continue
 
-        # 1. Uji kompilasi Regex
         try:
             rx = re.compile(s)
         except re.error as err:
             sys.exit(f"GAGAL di {file_str} baris {no}: Regex tidak valid ({err}) -> {s}")
 
-        # 2. Cegah regex kosong / terlalu rakus (misal '.*' saja)
         if rx.search("") is not None:
             sys.exit(f"GAGAL di {file_str} baris {no}: Regex terlalu luas (cocok dengan teks kosong) -> {s}")
 
-        # 3. Uji Anti-False Positive
         if not is_allowlist:
             for sample in SAFE_SMS_SAMPLES:
                 if rx.search(sample):
@@ -157,16 +167,23 @@ def proses_number_file(file_str: str, title: str, summary: list[str]):
         summary.append(f"- **{file_str}**: File tidak ditemukan, dilewati.")
         return 0
 
+    allowlist_rx = muat_allowlist_regex()
     unik = []
     seen = set()
     duplikat = 0
+    dihapus_allowlist = 0
 
     for no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         s = line.strip()
-        if not s or s.startswith(HEADER_PREFIXES) or s.startswith("!"):
+        if not s or s.startswith(HEADER_PREFIXES) or s.startswith(("!", "#")):
             continue
 
         norm = normalisasi_nomor_id(s)
+
+        if norm in allowlist_rx:
+            dihapus_allowlist += 1
+            continue
+
         try:
             rx = re.compile(norm)
         except re.error as err:
@@ -191,7 +208,8 @@ def proses_number_file(file_str: str, title: str, summary: list[str]):
 
     unik.sort()
     tulis_file(path, title, unik)
-    summary.append(f"- **{file_str}**: **{len(unik)}** aturan nomor aktif ({duplikat} duplikat dibersihkan)")
+    info_allow = f", {dihapus_allowlist} dihapus via allowlist" if dihapus_allowlist else ""
+    summary.append(f"- **{file_str}**: **{len(unik)}** aturan nomor aktif ({duplikat} duplikat dibersihkan{info_allow})")
     return len(unik)
 
 
@@ -233,4 +251,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()                    
+    main()
