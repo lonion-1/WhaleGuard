@@ -369,6 +369,7 @@ def main() -> int:
             if u.lower() not in known_lower and u.lower() not in rejected_set and u not in prioritas_dir
         ]
         kandidat_baru = prioritas_dir + prioritas_snowball
+        
         ]
 
         verified_count = 0
