@@ -2,11 +2,12 @@
 ! Copyright (c) 2026 <EazyWhale>
 ! License: GNU General Public License v3.0 (GPL-3.0)
 ! Maintainer: EazyWhale
-! Version: 2026.11.20.1016
-! Total Rules: 4
 ! --------------------------------------------------
 
 (?i).*\.(apk)\b.*
-(?i)\b(paket\s*anda\s*(tertahan|gagal\s*kirim).*klik|cek\s*resi\s*anda\s*di\s*sini.*\.apk|undangan\s*pernikahan\s*digital.*\.apk)\b
-(?i)\b(pinjaman\s*online|dana\s*tunai\s*cepat|limit\s*pinjaman\s*anda\s*(disetujui|cair)|tanpa\s*agunan\s*&\s*bi\s*checking|cair\s*dalam\s*\d+\s*menit)\b
-(?i)\b(selamat\s*anda\s*(memenangkan|terpilih\s*mendapatkan)\s*(hadiah|uang\s*tunai|iphone|mobil).*klik)\b
+(?i)\b(pinjaman\s*online|dana\s*tunai\s*cepat|limit\s*pinjaman\s*anda\s*(disetujui|cair)|tanpa\s*agunan\s*&\s*bi\s*checking|cair\s*dalam\s*\d+\s*menit|tenor\s*panjang\s*bunga\s*rendah)\b
+(?i)\b(paket\s*anda\s*(tertahan|gagal\s*kirim).*klik|cek\s*resi\s*anda\s*di\s*sini|undangan\s*pernikahan\s*digital|surat\s*tilang\s*elektronik.*klik)\b
+(?i)\b(rekening\s*(bca|bri|bni|mandiri|bsi)\s*anda\s*(akan\s*diblokir|terblokir|dinonaktifkan).*klik|perubahan\s*tarif\s*transaksi\s*bank.*klik)\b
+(?i)\b(selamat\s*anda\s*(memenangkan|terpilih\s*mendapatkan)\s*(hadiah|uang\s*tunai|iphone|mobil|dana\s*kaget).*klik)\b
+(?i)\b(kerja\s*(paruh\s*waktu|online\s*dari\s*rumah).*gaji\s*\d+.*(wa|whatsapp|telegram)|tugas\s*like\s*(&|dan)\s*subscribe.*komisi)\b
+(?i)\b(titip\s*dana\s*(trading|crypto|forex).*profit\s*\d+%|sinyal\s*vip\s*(crypto|trading).*pasti\s*cuan)\b
