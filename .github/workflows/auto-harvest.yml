@@ -1,0 +1,43 @@
+name: Auto-Harvester Nomor Spam (WhaleGuard)
+
+on:
+  push:
+    paths:
+      - 'inbox/raw_numbers.txt'
+  schedule:
+    - cron: '0 23 * * *' # Jalan otomatis setiap hari pukul 06:00 WIB
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  harvest-numbers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo WhaleGuard
+        uses: actions/checkout@v4
+
+      - name: Panen & konversi nomor spam ke Regex
+        run: python3 scripts/number_harvester.py
+
+      - name: Jalankan validator anti-false-positive
+        run: |
+          if [ -f scripts/validate_and_build.py ]; then
+            python3 scripts/validate_and_build.py
+          fi
+
+      - name: Commit otomatis ke rules/numbers-spam-id.txt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rules/numbers-spam-id.txt inbox/raw_numbers.txt
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(rules): auto-harvest nomor spam baru"
+            for i in 1 2 3; do
+              if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
+                exit 0
+              fi
+              sleep 5
+            done
+          fi
