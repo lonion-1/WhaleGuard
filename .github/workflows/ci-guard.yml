@@ -1,0 +1,50 @@
+name: Validasi & Rapikan Aturan WhaleGuard
+# Copyright (c) 2026 <EazyWhale>
+# Licensed under the MIT License.
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'rules/**'
+      - 'scripts/validate_and_build.py'
+  schedule:
+    - cron: '15 21 * * 6' # Keep-alive & cek mingguan setiap Minggu jam 04:15 WIB
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: whaleguard-ci
+  cancel-in-progress: false
+
+jobs:
+  validate-rules:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ambil isi repo
+        uses: actions/checkout@v4
+
+      - name: Jalankan Validator Regex & Simulator OTP
+        run: python3 scripts/validate_and_build.py
+
+      - name: Simpan hasil rapi ke GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rules/ README.md last-run.txt
+          if git diff --staged --quiet; then
+            echo "Tidak ada perubahan untuk di-commit."
+            exit 0
+          fi
+          git commit -m "chore(rules): validasi & rapikan aturan WhaleGuard [skip ci]"
+          for i in 1 2 3; do
+            if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
