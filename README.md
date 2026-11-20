@@ -14,7 +14,7 @@ Kumpulan aturan **Regex** dan daftar blokir nomor spam khusus **Indonesia** yang
 | **SMS Judi Online** | `rules/sms-judol-id.txt` | <!-- COUNT:rules/sms-judol-id.txt -->5<!-- /COUNT --> | `https://raw.githubusercontent.com/lonion-1/WhaleGuard/main/rules/sms-judol-id.txt` |
 | **SMS Penipuan, Pinjol & `.apk`** | `rules/sms-scam-pinjol-id.txt` | <!-- COUNT:rules/sms-scam-pinjol-id.txt -->7<!-- /COUNT --> | `https://raw.githubusercontent.com/lonion-1/WhaleGuard/main/rules/sms-scam-pinjol-id.txt` |
 | **Allowlist OTP & Kurir (Penting)** | `rules/sms-allowlist-otp.txt` | <!-- COUNT:rules/sms-allowlist-otp.txt -->3<!-- /COUNT --> | `https://raw.githubusercontent.com/lonion-1/WhaleGuard/main/rules/sms-allowlist-otp.txt` |
-| **Nomor Spam & Penipu** | `rules/numbers-spam-id.txt` | <!-- COUNT:rules/numbers-spam-id.txt -->39<!-- /COUNT --> | `https://raw.githubusercontent.com/lonion-1/WhaleGuard/main/rules/numbers-spam-id.txt` |
+| **Nomor Spam & Penipu** | `rules/numbers-spam-id.txt` | <!-- COUNT:rules/numbers-spam-id.txt -->58<!-- /COUNT --> | `https://raw.githubusercontent.com/lonion-1/WhaleGuard/main/rules/numbers-spam-id.txt` |
 
 ---
 
