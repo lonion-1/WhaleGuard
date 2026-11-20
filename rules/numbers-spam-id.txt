@@ -1,0 +1,7 @@
+! Title: WhaleGuard - Daftar Nomor Spam & Penipu Terverifikasi (Indonesia)
+! Copyright (c) 2026 <EazyWhale>
+! License: GNU General Public License v3.0 (GPL-3.0)
+! Maintainer: EazyWhale
+! --------------------------------------------------
+
+^(\+62|62|0)88800000000$
