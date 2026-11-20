@@ -1,13 +1,14 @@
 # Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Licensed under the GNU Affero General Public License v3.0.
-"""WhaleGuard Unified Radar v7.0 (Full-Autopilot Multi-Source + Tight Proximity Filter).
+"""WhaleGuard Unified Radar v7.1 (Anti-403 Search RSS + Telegram Public + DDG).
 
-Sumber pencarian:
-1. Reddit Search JSON (r/indonesia, r/finansial, r/indotech, r/all).
+Sumber pencarian (ramah IP GitHub Actions, tanpa API key):
+1. Bing Web Search RSS (?format=rss) -> mengindeks Reddit, Facebook Groups, dan web umum.
 2. Telegram Public Channel Web Preview (https://t.me/s/<channel>).
-3. DuckDuckGo HTML Search (fallback lintas web non-JS).
+3. DuckDuckGo HTML Search -> fallback lintas forum & media sosial.
 """
+import hashlib
 import html
 import json
 import re
@@ -16,13 +17,15 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
-REDDIT_TARGETS = [
-    ("Reddit r/indonesia", "https://www.reddit.com/r/indonesia/search.json?q=penipu+OR+pinjol+OR+judol+OR+scam+OR+apk&restrict_sr=1&sort=new&t=month&limit=30"),
-    ("Reddit r/finansial", "https://www.reddit.com/r/finansial/search.json?q=penipu+OR+pinjol+OR+phishing+OR+scam+OR+teror&restrict_sr=1&sort=new&t=month&limit=30"),
-    ("Reddit r/indotech", "https://www.reddit.com/r/indotech/search.json?q=penipu+OR+spam+OR+phishing+OR+apk&restrict_sr=1&sort=new&t=month&limit=25"),
-    ("Reddit Global ID", "https://www.reddit.com/search.json?q=%22nomor+penipu%22+OR+%22no+penipu%22+OR+%22undangan+apk%22&sort=new&t=month&limit=25"),
+BING_WEB_TARGETS = [
+    ("Bing -> Reddit ID", 'site:reddit.com/r/indonesia (penipu OR penipuan OR pinjol OR judol OR scam OR apk)'),
+    ("Bing -> Reddit Finansial", 'site:reddit.com/r/finansial (penipu OR penipuan OR pinjol OR phishing OR teror)'),
+    ("Bing -> Facebook Penipuan", 'site:facebook.com ("nomor penipu" OR "no penipu" OR "akun penipu" OR "undangan apk")'),
+    ("Bing -> Facebook Pinjol", 'site:facebook.com/groups (pinjol OR galbay OR "debt collector" OR teror)'),
+    ("Bing -> Telegram Publik", 'site:t.me/s/ ("nomor penipu" OR "no penipu" OR pinjol OR penipuan)'),
 ]
 
 # Tambahkan username kanal Telegram publik info penipuan/pinjol di sini (tanpa '@')
@@ -33,8 +36,9 @@ TELEGRAM_CHANNELS = [
 ]
 
 DDG_QUERIES = [
-    ("DDG Nomor Penipu", '"nomor penipu" OR "no penipu" "08"'),
-    ("DDG Pinjol Teror", '"teror pinjol" OR "dc pinjol" "08"'),
+    ("DDG -> Reddit Penipu", 'site:reddit.com/r/indonesia penipu OR pinjol "08"'),
+    ("DDG -> Nomor Penipu", '"nomor penipu" OR "no penipu" "08"'),
+    ("DDG -> Teror Pinjol", '"teror pinjol" OR "dc pinjol" "08"'),
 ]
 
 MAX_STATE = 3000
@@ -83,6 +87,11 @@ DUMMY_NUMBERS = {
 }
 
 
+def buat_id_stabil(prefix: str, kunci: str) -> str:
+    digest = hashlib.sha256(kunci.encode("utf-8")).hexdigest()[:16]
+    return f"{prefix}:{digest}"
+
+
 def normalisasi(nomor: str) -> str | None:
     d = re.sub(r"\D", "", nomor)
     if d.startswith("62"):
@@ -119,8 +128,14 @@ def bersihkan_html(raw_html: str) -> str:
     return re.sub(r"\s+", " ", teks).strip()
 
 
-def http_get(url: str, user_agent: str) -> str | None:
-    req = urllib.request.Request(url, headers={"User-Agent": user_agent})
+def http_get(url: str) -> str | None:
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+            "Accept-Language": "id-ID,id;q=0.9,en;q=0.8",
+        },
+    )
     try:
         with urllib.request.urlopen(req, timeout=25) as r:
             return r.read().decode("utf-8", errors="ignore")
@@ -129,35 +144,36 @@ def http_get(url: str, user_agent: str) -> str | None:
         return None
 
 
-def fetch_reddit(label: str, url: str) -> list[dict]:
-    raw = http_get(url, "linux:whaleguard-radar:v7.0 (by /u/EazyWhale)")
+def fetch_bing_rss(label: str, query: str) -> list[dict]:
+    encoded = urllib.parse.quote(query)
+    url = f"https://www.bing.com/search?q={encoded}&format=rss"
+    raw = http_get(url)
     if not raw:
         return []
     try:
-        data = json.loads(raw)
-        children = data.get("data", {}).get("children", [])
-    except Exception as e:
-        print(f"[WARN] Gagal parse JSON {label}: {e}")
+        root = ET.fromstring(raw)
+    except ET.ParseError as e:
+        print(f"[WARN] Gagal parse XML {label}: {e}")
         return []
 
     hasil = []
-    for item in children:
-        d = item.get("data", {})
-        pid = d.get("id")
-        if not pid:
-            continue
-        hasil.append({
-            "id": f"rd:{pid}",
-            "source": label,
-            "title": (d.get("title") or "").strip(),
-            "text": (d.get("selftext") or "").strip(),
-        })
+    for it in root.findall(".//item"):
+        title = bersihkan_html(it.findtext("title") or "")
+        link = (it.findtext("link") or "").strip()
+        desc = bersihkan_html(it.findtext("description") or "")
+        if title or desc:
+            hasil.append({
+                "id": buat_id_stabil("bing", link or f"{title}:{desc}"),
+                "source": label,
+                "title": title,
+                "text": desc,
+            })
     return hasil
 
 
 def fetch_telegram_channel(channel: str) -> list[dict]:
     url = f"https://t.me/s/{channel}"
-    raw = http_get(url, "Mozilla/5.0 (X11; Linux x86_64) WhaleGuard-Radar/7.0")
+    raw = http_get(url)
     if not raw:
         return []
 
@@ -181,17 +197,17 @@ def fetch_telegram_channel(channel: str) -> list[dict]:
 def fetch_ddg(label: str, query: str) -> list[dict]:
     encoded = urllib.parse.quote(query)
     url = f"https://html.duckduckgo.com/html/?q={encoded}"
-    raw = http_get(url, "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0")
+    raw = http_get(url)
     if not raw:
         return []
 
     hasil = []
-    snippets = re.findall(r'<a class="result__snippet"[^>]*>([\s\S]*?)</a>', raw)
-    for idx, snip_html in enumerate(snippets):
+    snippets = re.findall(r'class="result__snippet"[^>]*>([\s\S]*?)</a>', raw)
+    for snip_html in snippets:
         clean = bersihkan_html(snip_html)
         if clean:
             hasil.append({
-                "id": f"ddg:{hash(clean)}",
+                "id": buat_id_stabil("ddg", clean),
                 "source": label,
                 "title": clean[:90],
                 "text": clean,
@@ -235,17 +251,23 @@ def main() -> int:
 
     semua_post: list[dict] = []
 
-    for label, url in REDDIT_TARGETS:
-        semua_post.extend(fetch_reddit(label, url))
+    for label, q in BING_WEB_TARGETS:
+        items = fetch_bing_rss(label, q)
+        print(f"[INFO] {label}: {len(items)} hasil")
+        semua_post.extend(items)
         time.sleep(1.5)
 
     for ch in TELEGRAM_CHANNELS:
-        semua_post.extend(fetch_telegram_channel(ch))
+        items = fetch_telegram_channel(ch)
+        print(f"[INFO] Telegram @{ch}: {len(items)} pesan")
+        semua_post.extend(items)
         time.sleep(1.0)
 
     for label, q in DDG_QUERIES:
-        semua_post.extend(fetch_ddg(label, q))
-        time.sleep(3.0)
+        items = fetch_ddg(label, q)
+        print(f"[INFO] {label}: {len(items)} hasil")
+        semua_post.extend(items)
+        time.sleep(2.5)
 
     nomor_baru: set[str] = set()
     for post in semua_post:
