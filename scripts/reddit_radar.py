@@ -14,7 +14,7 @@ QUERIES = [
 ]
 
 RE_PHONE = re.compile(r"(?:\+?62|0)8[1-9][0-9\-\s]{6,13}[0-9]")
-STATE_FILE = Path(".github/radar_seen.json")
+STATE_FILE = Path(".github/reddit_seen.json")
 
 
 def fetch_reddit(query: str) -> list[dict]:
@@ -107,4 +107,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-  
