@@ -46,9 +46,9 @@ ALLOWLIST_FILE = Path("rules/numbers-allowlist.txt")
 RE_PHONE = re.compile(r"(?<![\d+])(?:\+62|62|0)8[1-9](?:[ .\-]?\d){6,10}(?!\d)")
 RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)([2-9]\d{7,11})\$?$")
 
-# Pola username Telegram valid (5-32 karakter) dari URL t.me/ atau @mention
+# Ambil hanya tautan t.me/... (abaikan @username pribadi pelaku di laporan)
 RE_TG_MENTION = re.compile(
-    r"(?:(?:https?://)?(?:t\.me|telegram\.me)/(?:s/)?|@)([a-zA-Z][a-zA-Z0-9_]{4,31})\b"
+    r"(?:https?://)?(?:t\.me|telegram\.me)/(?:s/)?([a-zA-Z][a-zA-Z0-9_]{4,31})\b"
 )
 
 RESERVED_TG_NAMES = {
