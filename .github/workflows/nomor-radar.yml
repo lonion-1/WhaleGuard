@@ -1,4 +1,7 @@
 name: Radar Nomor Sosmed (WhaleGuard)
+# Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Licensed under the GNU Affero General Public License v3.0.
 
 on:
   schedule:
