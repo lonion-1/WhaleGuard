@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'inbox/raw_numbers.txt'
+      - 'rules/numbers-allowlist.txt'
   schedule:
     - cron: '0 23 * * *' # Jalan otomatis setiap hari pukul 06:00 WIB
   workflow_dispatch:
