@@ -1,7 +1,7 @@
 # Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Licensed under the GNU Affero General Public License v3.0.
-"""WhaleGuard Auto-Harvester: sedot nomor spam mentah -> regex rules/numbers-spam-id.txt."""
+"""WhaleGuard Auto-Harvester: sedot nomor spam mentah (HP & Telepon Rumah/VoIP) -> regex rules/numbers-spam-id.txt."""
 import re
 import sys
 import urllib.error
@@ -17,8 +17,9 @@ INBOX_FILE = Path("inbox/raw_numbers.txt")
 RULES_FILE = Path("rules/numbers-spam-id.txt")
 ALLOWLIST_FILE = Path("rules/numbers-allowlist.txt")
 
-RE_PHONE = re.compile(r"(?<![\d+])(?:\+62|62|0)8[1-9](?:[ .\-]?\d){6,10}(?!\d)")
-RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)(8\d{8,11})\$?$")
+# Mendukung nomor HP (08xx) maupun nomor kantor/VoIP (021xx, 022xx, dst.)
+RE_PHONE = re.compile(r"(?<![\d+])(?:\+62|62|0)[2-9](?:[ .\-]?\d){7,11}(?!\d)")
+RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)([2-9]\d{7,11})\$?$")
 
 DUMMY_NUMBERS = {
     "0812345678", "08123456789", "081234567890", "0812345678901",
@@ -30,15 +31,15 @@ def normalisasi(nomor: str) -> str | None:
     d = re.sub(r"\D", "", nomor)
     if d.startswith("62"):
         d = "0" + d[2:]
-    if not re.fullmatch(r"08[1-9]\d{7,10}", d):
+    if not re.fullmatch(r"0[2-9]\d{7,11}", d):
         return None
     if d in DUMMY_NUMBERS or len(set(d[2:])) == 1:
         return None
     return d
 
 
-def nomor_ke_regex(norm_08: str) -> str:
-    return rf"^(\+62|62|0){norm_08[1:]}$"
+def nomor_ke_regex(norm_0: str) -> str:
+    return rf"^(\+62|62|0){norm_0[1:]}$"
 
 
 def muat_allowlist(path: Path) -> set[str]:
@@ -92,7 +93,7 @@ def bersihkan_dan_muat_rules(path: Path, allowlist: set[str]) -> set[str]:
 def fetch_text(url: str) -> str:
     req = urllib.request.Request(
         url,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-Harvester/2.0)"},
+        headers={"User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-Harvester/2.1)"},
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
@@ -152,7 +153,7 @@ def main() -> int:
 
     if inbox_ada_isi:
         INBOX_FILE.write_text(
-            "# Tempel nomor penipu mentah (08xx / +628xx) atau teks laporan di bawah ini.\n"
+            "# Tempel nomor penipu mentah (08xx / 021xx / +62xx) atau teks laporan di bawah ini.\n"
             "# Bot Auto-Harvester akan otomatis mengubahnya jadi Regex di rules/numbers-spam-id.txt.\n",
             encoding="utf-8",
         )
