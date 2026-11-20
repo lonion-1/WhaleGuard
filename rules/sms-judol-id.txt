@@ -4,6 +4,8 @@
 ! Maintainer: EazyWhale
 ! --------------------------------------------------
 
-(?i)\b(slot\s*88|gacor|maxwin|zeus\s*x?\d+|scatter\s*hitam|rtp\s*live|situs\s*slot|judi\s*online|bola\s*tangkas|togel\s*(online|hk|sgp|sdy))\b
-(?i)\b(depo(sit)?\s*(pulsa|dana|ovo|qris).*(bonus|new\s*member|garansi)|bonus\s*new\s*member\s*\d+%|garansi\s*kekalahan\s*\d+%)\b
-(?i)\b(link\s*alternatif.*(slot|gacor|maxwin|togel)|daftar\s*sekarang.*(jackpot|maxwin|slot))\b
+(?i)\b(slot\s*88|slot\s*gacor|gacor\s*(hari\s*ini|parah|abis|terus)|maxwin|zeus\s*x?\d+|scatter\s*hitam|rtp\s*live|pola\s*gacor|jam\s*gacor)\b
+(?i)\b(situs\s*slot|judi\s*online|bola\s*tangkas|sabung\s*ayam\s*online|live\s*casino|togel\s*(online|hk|sgp|sdy|macau))\b
+(?i)\b(depo(sit)?\s*(pulsa|dana|ovo|qris|bank).*(tanpa\s*potongan|bonus|new\s*member|garansi)|bonus\s*new\s*member\s*\d+%|garansi\s*kekalahan\s*\d+%)\b
+(?i)\b(link\s*alternatif.*(slot|gacor|maxwin|togel)|daftar\s*sekarang.*(jackpot|maxwin|slot)|bocoran\s*admin.*(slot|maxwin))\b
+(?i)\b(wd\s*(lancar|kilat|cepat)|withdraw\s*\d+\s*(jt|juta)|akun\s*(vip|pro|winstreak).*(slot|maxwin))\b
