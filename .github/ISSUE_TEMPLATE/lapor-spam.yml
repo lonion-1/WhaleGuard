@@ -1,0 +1,33 @@
+name: Lapor Nomor Spam / SMS Judol & Scam
+description: "Setor nomor telepon penipu/telemarketer atau pola SMS judol & penipuan .APK untuk WhaleGuard."
+title: "[Lapor Spam]: "
+labels: ["lapor-spam"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🛡️ WhaleGuard — Lapor Nomor Spam & SMS Penipuan
+        Bot akan otomatis mengecek apakah nomor atau isi SMS tersebut sudah tertangkap oleh aturan **WhaleGuard** yang aktif.
+        *(Jangan sertakan data pribadi sensitif seperti PIN, password, atau nama lengkapmu di dalam contoh SMS).*
+
+  - type: dropdown
+    id: jenis
+    attributes:
+      label: Jenis Laporan
+      options:
+        - Nomor Telepon Spam / Penipu
+        - SMS Promosi Judi Online (Judol)
+        - SMS Penipuan / Pinjol Ilegal / File .APK
+    validations:
+      required: true
+
+  - type: textarea
+    id: payload
+    attributes:
+      label: Nomor Telepon / Isi Contoh SMS atau Pola Regex
+      description: "Masukkan **1 nomor per baris** (jika melapor nomor), atau tempel **contoh isi SMS spam / pola regex** (jika melapor SMS)."
+      placeholder: |
+        081234567890
+        +6288811122233
+    validations:
+      required: true
