@@ -1,13 +1,7 @@
 # Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Licensed under the GNU Affero General Public License v3.0.
-"""WhaleGuard Auto-Harvester: sedot nomor spam mentah -> regex rules/numbers-spam-id.txt.
-
-Fitur proteksi:
-- Melewati nomor yang sudah ada di rules/numbers-spam-id.txt.
-- Menolak nomor yang terdaftar di rules/numbers-allowlist.txt.
-- Otomatis membersihkan rules/numbers-spam-id.txt jika ada nomor yang masuk allowlist.
-"""
+"""WhaleGuard Auto-Harvester: sedot nomor spam mentah -> regex rules/numbers-spam-id.txt."""
 import re
 import sys
 import urllib.error
@@ -15,6 +9,7 @@ import urllib.request
 from pathlib import Path
 
 FEED_URLS: list[str] = [
+    # Tambahkan URL raw GitHub / Gist komunitas di sini:
     # "https://raw.githubusercontent.com/contoh-user/contoh-repo/main/spam-numbers.txt",
 ]
 
@@ -43,8 +38,7 @@ def normalisasi(nomor: str) -> str | None:
 
 
 def nomor_ke_regex(norm_08: str) -> str:
-    subscriber = norm_08[1:]
-    return rf"^(\+62|62|0){subscriber}$"
+    return rf"^(\+62|62|0){norm_08[1:]}$"
 
 
 def muat_allowlist(path: Path) -> set[str]:
@@ -53,7 +47,7 @@ def muat_allowlist(path: Path) -> set[str]:
         return hasil
     for line in path.read_text(encoding="utf-8").splitlines():
         s = line.split("#", 1)[0].strip()
-        if not s:
+        if not s or s.startswith("!"):
             continue
         m = RE_EXISTING_RULE.match(s)
         if m:
@@ -64,7 +58,6 @@ def muat_allowlist(path: Path) -> set[str]:
 
 
 def bersihkan_dan_muat_rules(path: Path, allowlist: set[str]) -> set[str]:
-    """Muat nomor eksisting sekaligus hapus nomor yang terdaftar di allowlist."""
     sudah_ada: set[str] = set()
     if not path.exists():
         return sudah_ada
@@ -74,16 +67,12 @@ def bersihkan_dan_muat_rules(path: Path, allowlist: set[str]) -> set[str]:
 
     for line in path.read_text(encoding="utf-8").splitlines():
         s = line.strip()
-        if not s or s.startswith("#"):
+        if not s or s.startswith(("#", "!")):
             lines_bersih.append(line)
             continue
 
-        norm: str | None = None
         m = RE_EXISTING_RULE.match(s)
-        if m:
-            norm = "0" + m.group(1)
-        else:
-            norm = normalisasi(s)
+        norm = ("0" + m.group(1)) if m else normalisasi(s)
 
         if norm is not None and norm in allowlist:
             terhapus += 1
@@ -103,7 +92,7 @@ def bersihkan_dan_muat_rules(path: Path, allowlist: set[str]) -> set[str]:
 def fetch_text(url: str) -> str:
     req = urllib.request.Request(
         url,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-Harvester/1.1)"},
+        headers={"User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-Harvester/2.0)"},
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
@@ -122,7 +111,7 @@ def main() -> int:
 
     if INBOX_FILE.exists():
         isi_inbox = INBOX_FILE.read_text(encoding="utf-8")
-        baris_aktif = [b for b in isi_inbox.splitlines() if b.strip() and not b.strip().startswith("#")]
+        baris_aktif = [b for b in isi_inbox.splitlines() if b.strip() and not b.strip().startswith(("#", "!"))]
         if baris_aktif:
             inbox_ada_isi = True
             print("[OK] Membaca nomor dari inbox/raw_numbers.txt...")
