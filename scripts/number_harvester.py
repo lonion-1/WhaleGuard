@@ -2,9 +2,10 @@
 # Licensed under the MIT License.
 """WhaleGuard Auto-Harvester: sedot nomor spam mentah -> regex rules/numbers-spam-id.txt.
 
-Sumber otomatis:
-1. File lokal inbox/raw_numbers.txt (tempel teks/nomor apa pun di sini, bot akan memproses & membersihkannya).
-2. Daftar URL raw teks/CSV publik di FEED_URLS.
+Fitur proteksi:
+- Melewati nomor yang sudah ada di rules/numbers-spam-id.txt.
+- Menolak nomor yang terdaftar di rules/numbers-allowlist.txt.
+- Otomatis membersihkan rules/numbers-spam-id.txt jika ada nomor yang masuk allowlist.
 """
 import re
 import sys
@@ -12,13 +13,13 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# Opsional: masukkan URL raw daftar nomor spam publik (.txt / .csv) jika ada
 FEED_URLS: list[str] = [
     # "https://raw.githubusercontent.com/contoh-user/contoh-repo/main/spam-numbers.txt",
 ]
 
 INBOX_FILE = Path("inbox/raw_numbers.txt")
 RULES_FILE = Path("rules/numbers-spam-id.txt")
+ALLOWLIST_FILE = Path("rules/numbers-allowlist.txt")
 
 RE_PHONE = re.compile(r"(?<![\d+])(?:\+62|62|0)8[1-9](?:[ .\-]?\d){6,10}(?!\d)")
 RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)(8\d{8,11})\$?$")
@@ -41,30 +42,67 @@ def normalisasi(nomor: str) -> str | None:
 
 
 def nomor_ke_regex(norm_08: str) -> str:
-    subscriber = norm_08[1:]  # buang '0' depan -> '8123456789'
+    subscriber = norm_08[1:]
     return rf"^(\+62|62|0){subscriber}$"
 
 
-def muat_nomor_eksisting(path: Path) -> set[str]:
-    sudah_ada: set[str] = set()
+def muat_allowlist(path: Path) -> set[str]:
+    hasil: set[str] = set()
     if not path.exists():
-        return sudah_ada
+        return hasil
     for line in path.read_text(encoding="utf-8").splitlines():
-        s = line.strip()
-        if not s or s.startswith("#"):
+        s = line.split("#", 1)[0].strip()
+        if not s:
             continue
         m = RE_EXISTING_RULE.match(s)
         if m:
-            sudah_ada.add("0" + m.group(1))
+            hasil.add("0" + m.group(1))
         elif (norm := normalisasi(s)) is not None:
+            hasil.add(norm)
+    return hasil
+
+
+def bersihkan_dan_muat_rules(path: Path, allowlist: set[str]) -> set[str]:
+    """Muat nomor eksisting sekaligus hapus nomor yang terdaftar di allowlist."""
+    sudah_ada: set[str] = set()
+    if not path.exists():
+        return sudah_ada
+
+    lines_bersih: list[str] = []
+    terhapus = 0
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            lines_bersih.append(line)
+            continue
+
+        norm: str | None = None
+        m = RE_EXISTING_RULE.match(s)
+        if m:
+            norm = "0" + m.group(1)
+        else:
+            norm = normalisasi(s)
+
+        if norm is not None and norm in allowlist:
+            terhapus += 1
+            continue
+
+        if norm is not None:
             sudah_ada.add(norm)
+        lines_bersih.append(line)
+
+    if terhapus > 0:
+        path.write_text("\n".join(lines_bersih) + "\n", encoding="utf-8")
+        print(f"[ALLOWLIST] Menghapus {terhapus} nomor dari {path} karena terdaftar di allowlist.")
+
     return sudah_ada
 
 
 def fetch_text(url: str) -> str:
     req = urllib.request.Request(
         url,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-Harvester/1.0)"},
+        headers={"User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-Harvester/1.1)"},
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
@@ -75,13 +113,19 @@ def fetch_text(url: str) -> str:
 
 
 def main() -> int:
+    allowlist = muat_allowlist(ALLOWLIST_FILE)
+    sudah_ada = bersihkan_dan_muat_rules(RULES_FILE, allowlist)
+
     kumpulan_teks: list[str] = []
+    inbox_ada_isi = False
 
     if INBOX_FILE.exists():
         isi_inbox = INBOX_FILE.read_text(encoding="utf-8")
-        if isi_inbox.strip():
+        baris_aktif = [b for b in isi_inbox.splitlines() if b.strip() and not b.strip().startswith("#")]
+        if baris_aktif:
+            inbox_ada_isi = True
             print("[OK] Membaca nomor dari inbox/raw_numbers.txt...")
-            kumpulan_teks.append(isi_inbox)
+            kumpulan_teks.append("\n".join(baris_aktif))
 
     for url in FEED_URLS:
         u = url.strip()
@@ -91,33 +135,32 @@ def main() -> int:
                 print(f"[OK] Membaca feed dari {u}")
                 kumpulan_teks.append(teks_feed)
 
-    if not kumpulan_teks:
-        print("Auto-Harvester: inbox kosong & tidak ada FEED_URLS aktif.")
-        return 0
+    if kumpulan_teks:
+        gabungan = "\n".join(kumpulan_teks)
+        kandidat = {
+            n for m in RE_PHONE.finditer(gabungan)
+            if (n := normalisasi(m.group(0))) is not None
+        }
 
-    gabungan = "\n".join(kumpulan_teks)
-    kandidat = {
-        n for m in RE_PHONE.finditer(gabungan)
-        if (n := normalisasi(m.group(0))) is not None
-    }
+        diblokir_allowlist = kandidat & allowlist
+        if diblokir_allowlist:
+            print(f"[ALLOWLIST] Melewati {len(diblokir_allowlist)} nomor karena dilindungi allowlist.")
 
-    sudah_ada = muat_nomor_eksisting(RULES_FILE)
-    nomor_baru = sorted(kandidat - sudah_ada)
+        nomor_baru = sorted(kandidat - sudah_ada - allowlist)
 
-    if nomor_baru:
-        RULES_FILE.parent.mkdir(parents=True, exist_ok=True)
-        existing_content = RULES_FILE.read_text(encoding="utf-8") if RULES_FILE.exists() else ""
-        if existing_content and not existing_content.endswith("\n"):
-            existing_content += "\n"
+        if nomor_baru:
+            RULES_FILE.parent.mkdir(parents=True, exist_ok=True)
+            existing_content = RULES_FILE.read_text(encoding="utf-8") if RULES_FILE.exists() else ""
+            if existing_content and not existing_content.endswith("\n"):
+                existing_content += "\n"
 
-        baris_baru = "\n".join(nomor_ke_regex(n) for n in nomor_baru) + "\n"
-        RULES_FILE.write_text(existing_content + baris_baru, encoding="utf-8")
-        print(f"[SUKSES] Menambahkan {len(nomor_baru)} nomor baru ke {RULES_FILE}.")
-    else:
-        print("[INFO] Tidak ada nomor baru (semua sudah ada di daftar).")
+            baris_baru = "\n".join(nomor_ke_regex(n) for n in nomor_baru) + "\n"
+            RULES_FILE.write_text(existing_content + baris_baru, encoding="utf-8")
+            print(f"[SUKSES] Menambahkan {len(nomor_baru)} nomor baru ke {RULES_FILE}.")
+        else:
+            print("[INFO] Tidak ada nomor baru (semua sudah tercatat atau masuk allowlist).")
 
-    # Kosongkan inbox setelah diproses agar tidak diproses ulang
-    if INBOX_FILE.exists() and INBOX_FILE.read_text(encoding="utf-8").strip():
+    if inbox_ada_isi:
         INBOX_FILE.write_text(
             "# Tempel nomor penipu mentah (08xx / +628xx) atau teks laporan di bawah ini.\n"
             "# Bot Auto-Harvester akan otomatis mengubahnya jadi Regex di rules/numbers-spam-id.txt.\n",
