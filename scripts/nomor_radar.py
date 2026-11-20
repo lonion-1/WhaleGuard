@@ -35,7 +35,7 @@ DIRECTORY_QUERIES = [
 
 MAX_STATE = 4000
 MAX_ACTIVE_CHANNELS = 35
-MAX_VERIFY_PER_RUN = 10
+MAX_VERIFY_PER_RUN = 20
 MAX_REJECTED = 600
 
 STATE_FILE = Path(".github/nomor_radar_seen.json")
@@ -357,12 +357,18 @@ def main() -> int:
             print(f"[+{len(ditemukan)}] {post['source']}: {', '.join(sorted(ditemukan))} <- {post['title'][:75]}")
             nomor_baru.update(ditemukan)
 
-    # 3. Auto-Discovery kanal baru (Snowball + Direktori) jika slot masih tersedia
+        # 3. Auto-Discovery kanal baru (Prioritaskan Direktori dulu, baru Snowball)
     if len(channels_map) < MAX_ACTIVE_CHANNELS:
         dir_candidates = fetch_directory_candidates()
-        kandidat_baru = [
-            u for u in (snowball_candidates | dir_candidates)
+        prioritas_dir = [
+            u for u in dir_candidates
             if u.lower() not in known_lower and u.lower() not in rejected_set
+        ]
+        prioritas_snowball = [
+            u for u in snowball_candidates
+            if u.lower() not in known_lower and u.lower() not in rejected_set and u not in prioritas_dir
+        ]
+        kandidat_baru = prioritas_dir + prioritas_snowball
         ]
 
         verified_count = 0
