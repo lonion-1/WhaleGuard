@@ -1,0 +1,9 @@
+! Title: WhaleGuard - Filter SMS Judi Online (Indonesia)
+! Copyright (c) 2026 <EazyWhale>
+! License: GNU General Public License v3.0 (GPL-3.0)
+! Maintainer: EazyWhale
+! --------------------------------------------------
+
+(?i)\b(slot\s*88|gacor|maxwin|zeus\s*x?\d+|scatter\s*hitam|rtp\s*live|situs\s*slot|judi\s*online|bola\s*tangkas|togel\s*(online|hk|sgp|sdy))\b
+(?i)\b(depo(sit)?\s*(pulsa|dana|ovo|qris).*(bonus|new\s*member|garansi)|bonus\s*new\s*member\s*\d+%|garansi\s*kekalahan\s*\d+%)\b
+(?i)\b(link\s*alternatif.*(slot|gacor|maxwin|togel)|daftar\s*sekarang.*(jackpot|maxwin|slot))\b
