@@ -1,10 +1,11 @@
 # Copyright (c) 2026 <EazyWhale>
 # Licensed under the MIT License.
-"""WhaleGuard Unified Radar (Nomor-Only Mode).
+"""WhaleGuard Unified Radar (Nomor-Only + Allowlist + Dedup).
 
 Memindai Reddit, Facebook, dan Telegram sekaligus.
-HANYA membuka Issue jika ditemukan nomor telepon Indonesia (08xx / +628xx).
-Judul diskusi tanpa nomor telepon otomatis dibuang.
+- Hanya mengambil postingan yang benar-benar memuat konteks penipuan/pinjol/spam.
+- Otomatis melewati nomor yang sudah ada di rules/numbers-spam-id.txt.
+- Otomatis melewati nomor yang dilindungi di rules/numbers-allowlist.txt.
 """
 import html
 import json
@@ -18,14 +19,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 TARGETS = [
-    # Reddit
     ("Reddit r/indonesia", "site:reddit.com/r/indonesia (penipu OR penipuan OR pinjol OR judol OR scam OR apk)"),
     ("Reddit r/finansial", "site:reddit.com/r/finansial (penipu OR penipuan OR pinjol OR phishing OR scam)"),
     ("Reddit r/indotech", "site:reddit.com/r/indotech (penipu OR penipuan OR spam OR phishing)"),
-    # Facebook Publik
     ("Facebook Pinjol", 'site:facebook.com/groups (pinjol OR galbay OR "debt collector" OR penipu OR penipuan)'),
     ("Facebook Penipuan", 'site:facebook.com ("nomor penipu" OR "penipuan pinjol" OR "undangan apk" OR "paket penipu")'),
-    # Telegram Publik
     ("Telegram Pinjol", 'site:t.me/s/ (pinjol OR galbay OR "debt collector" OR penipu OR penipuan)'),
     ("Telegram Penipuan", 'site:t.me/s/ (penipu OR penipuan OR "nomor penipu" OR scam OR judol)'),
 ]
@@ -33,8 +31,22 @@ TARGETS = [
 MAX_STATE = 2500
 STATE_FILE = Path(".github/nomor_radar_seen.json")
 REPORT_FILE = Path("nomor_report.md")
+RULES_FILE = Path("rules/numbers-spam-id.txt")
+ALLOWLIST_FILE = Path("rules/numbers-allowlist.txt")
 
 RE_PHONE = re.compile(r"(?<![\d+])(?:\+62|62|0)8[1-9](?:[ .\-]?\d){6,10}(?!\d)")
+RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)(8\d{8,11})\$?$")
+
+# Wajib ada kata kunci konteks penipuan di judul/cuplikan (membuang iklan jualan biasa)
+RE_SCAM_CONTEXT = re.compile(
+    r"(?i)\b("
+    r"penipu\w*|scam\w*|modus|waspada|hati[\s\-]?hati|hati2|awas|"
+    r"salah\s*guna\w*|salahgunain|pinjol|galbay|dc\b|debt\s*collector|"
+    r"judol|slot\s*gacor|phishing|smishing|malware|apk|spam\w*|"
+    r"sebar\s*data|blokir|hack\w*|investasi\s*bodong|loker\s*fiktif"
+    r")\b"
+)
+
 DUMMY_NUMBERS = {
     "0812345678", "08123456789", "081234567890", "0812345678901",
     "08987654321", "081122334455",
@@ -50,6 +62,22 @@ def normalisasi(nomor: str) -> str | None:
     if d in DUMMY_NUMBERS or len(set(d[2:])) == 1:
         return None
     return d
+
+
+def muat_daftar_nomor(path: Path) -> set[str]:
+    hasil: set[str] = set()
+    if not path.exists():
+        return hasil
+    for line in path.read_text(encoding="utf-8").splitlines():
+        s = line.split("#", 1)[0].strip()
+        if not s:
+            continue
+        m = RE_EXISTING_RULE.match(s)
+        if m:
+            hasil.add("0" + m.group(1))
+        elif (norm := normalisasi(s)) is not None:
+            hasil.add(norm)
+    return hasil
 
 
 def aman(teks: str, batas: int = 160) -> str:
@@ -73,7 +101,7 @@ def fetch_rss(label: str, query: str) -> list[dict] | None:
     req = urllib.request.Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-NomorRadar/5.0; +https://github.com/lonion-1/WhaleGuard)",
+            "User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-NomorRadar/5.1; +https://github.com/lonion-1/WhaleGuard)",
             "Accept": "application/rss+xml, application/xml, text/xml",
         },
     )
@@ -108,6 +136,10 @@ def fetch_rss(label: str, query: str) -> list[dict] | None:
 
 
 def main() -> int:
+    sudah_blokir = muat_daftar_nomor(RULES_FILE)
+    allowlist = muat_daftar_nomor(ALLOWLIST_FILE)
+    diabaikan = sudah_blokir | allowlist
+
     seen_list: list[str] = []
     if STATE_FILE.exists():
         try:
@@ -134,12 +166,14 @@ def main() -> int:
             seen_list.append(sid)
 
             gabungan = f"{post['title']}\n{post['text']}"
+            if not RE_SCAM_CONTEXT.search(gabungan):
+                continue
+
             nomor_valid = sorted({
                 n for m in RE_PHONE.finditer(gabungan)
-                if (n := normalisasi(m.group(0))) is not None
+                if (n := normalisasi(m.group(0))) is not None and n not in diabaikan
             })
 
-            # NOMOR-ONLY GATE: Tanpa nomor telepon = langsung buang!
             if not nomor_valid:
                 continue
 
@@ -167,16 +201,16 @@ def main() -> int:
         return 1
 
     if not temuan:
-        print("Radar Nomor: 0 nomor ditemukan. Tidak membuka Issue.")
+        print("Radar Nomor: 0 nomor baru ditemukan. Tidak membuka Issue.")
         set_output(False)
         return 0
 
     daftar_siap_salin = "\n".join(sorted(semua_nomor))
     L = [
         "### 📞 Temuan Nomor Telepon Penipu (`WhaleGuard`)",
-        f"Ditemukan **{len(semua_nomor)} nomor unik** dari **{len(temuan)} sumber**:",
+        f"Ditemukan **{len(semua_nomor)} nomor baru** dari **{len(temuan)} sumber**:",
         "",
-        "#### 📋 Daftar Nomor Siap Salin (Tempel ke Form Lapor / `inbox/raw_numbers.txt`)",
+        "#### 📋 Daftar Nomor Siap Salin (Tempel ke `inbox/raw_numbers.txt`)",
         "```text",
         daftar_siap_salin,
         "```",
@@ -190,7 +224,7 @@ def main() -> int:
     L += [
         "",
         "---",
-        "*Filter Nomor-Only aktif: diskusi tanpa nomor telepon telah dibuang otomatis.*",
+        "*Filter aktif: nomor yang sudah ada di `rules/numbers-spam-id.txt` atau `rules/numbers-allowlist.txt` otomatis dilewati.*",
     ]
 
     body = "\n".join(L)
