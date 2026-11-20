@@ -1,5 +1,6 @@
-# Copyright (c) 2026 <EazyWhale>
-# Licensed under the MIT License.
+# Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Licensed under the GNU Affero General Public License v3.0.
 """WhaleGuard Auto-Harvester: sedot nomor spam mentah -> regex rules/numbers-spam-id.txt.
 
 Fitur proteksi:
