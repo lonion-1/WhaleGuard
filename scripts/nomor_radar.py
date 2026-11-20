@@ -1,16 +1,16 @@
 # Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Licensed under the GNU Affero General Public License v3.0.
-"""WhaleGuard Unified Radar (Nomor-Only + Allowlist + Dedup).
+"""WhaleGuard Unified Radar (Full-Autopilot + Proximity Context Filter).
 
-Memindai Reddit, Facebook, dan Telegram sekaligus.
-- Hanya mengambil postingan yang benar-benar memuat konteks penipuan/pinjol/spam.
-- Otomatis melewati nomor yang sudah ada di rules/numbers-spam-id.txt.
-- Otomatis melewati nomor yang dilindungi di rules/numbers-allowlist.txt.
+Memindai Reddit, Facebook, dan Telegram:
+1. Mengecek konteks kalimat di sekitar nomor telepon (±80 karakter), bukan sekadar banner grup.
+2. Menolak iklan jualan biasa (motor, makanan, jasa) yang kebetulan ada tulisan "hati-hati penipuan".
+3. Melewati nomor yang sudah tercatat atau dilindungi rules/numbers-allowlist.txt.
+4. Langsung mengonversi & menulis nomor valid ke rules/numbers-spam-id.txt.
 """
 import html
 import json
-import os
 import re
 import sys
 import urllib.error
@@ -23,29 +23,42 @@ TARGETS = [
     ("Reddit r/indonesia", "site:reddit.com/r/indonesia (penipu OR penipuan OR pinjol OR judol OR scam OR apk)"),
     ("Reddit r/finansial", "site:reddit.com/r/finansial (penipu OR penipuan OR pinjol OR phishing OR scam)"),
     ("Reddit r/indotech", "site:reddit.com/r/indotech (penipu OR penipuan OR spam OR phishing)"),
-    ("Facebook Pinjol", 'site:facebook.com/groups (pinjol OR galbay OR "debt collector" OR penipu OR penipuan)'),
-    ("Facebook Penipuan", 'site:facebook.com ("nomor penipu" OR "penipuan pinjol" OR "undangan apk" OR "paket penipu")'),
-    ("Telegram Pinjol", 'site:t.me/s/ (pinjol OR galbay OR "debt collector" OR penipu OR penipuan)'),
-    ("Telegram Penipuan", 'site:t.me/s/ (penipu OR penipuan OR "nomor penipu" OR scam OR judol)'),
+    ("Facebook Pinjol", 'site:facebook.com/groups (pinjol OR galbay OR "debt collector" OR teror OR penipu)'),
+    ("Facebook Penipuan", 'site:facebook.com ("nomor penipu" OR "no penipu" OR "akun penipu" OR "salahgunain" OR "undangan apk")'),
+    ("Telegram Pinjol", 'site:t.me/s/ (pinjol OR galbay OR "debt collector" OR teror OR penipu)'),
+    ("Telegram Penipuan", 'site:t.me/s/ ("nomor penipu" OR penipuan OR scam OR judol OR apk)'),
 ]
 
 MAX_STATE = 2500
 STATE_FILE = Path(".github/nomor_radar_seen.json")
-REPORT_FILE = Path("nomor_report.md")
 RULES_FILE = Path("rules/numbers-spam-id.txt")
 ALLOWLIST_FILE = Path("rules/numbers-allowlist.txt")
 
 RE_PHONE = re.compile(r"(?<![\d+])(?:\+62|62|0)8[1-9](?:[ .\-]?\d){6,10}(?!\d)")
 RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)(8\d{8,11})\$?$")
 
-# Wajib ada kata kunci konteks penipuan di judul/cuplikan (membuang iklan jualan biasa)
-RE_SCAM_CONTEXT = re.compile(
+# Kata kunci bukti kuat yang HARUS muncul dekat nomor telepon (±80 karakter)
+RE_PROXIMITY_SCAM = re.compile(
+    r"(?i)("
+    r"\b(?:no|nomor|wa|whatsapp|tlp|telp)\s*(?:penipu|pelaku|dc|teror|dia|nya)\b|"
+    r"\b(?:penipu|nipu|pelaku|scam\w*|salah\s*guna\w*|salahgunain|bajak|hack\w*)\b|"
+    r"\b(?:pinjol|galbay|dc\b|debt\s*collector|teror\w*|ancam\w*|sebar\s*data|sebar\s*kontak)\b|"
+    r"\b(?:judol|slot\s*gacor|phishing|smishing|malware|apk|undangan\s*apk)\b|"
+    r"\b(?:akun\s*palsu|atas\s*nama|kronologi|viralkan|bantu\s*up)\b"
+    r")"
+)
+
+# Ciri iklan jual-beli biasa (dibuang kecuali ada bukti penipuan eksplisit)
+RE_COMMERCIAL_NOISE = re.compile(
     r"(?i)\b("
-    r"penipu\w*|scam\w*|modus|waspada|hati[\s\-]?hati|hati2|awas|"
-    r"salah\s*guna\w*|salahgunain|pinjol|galbay|dc\b|debt\s*collector|"
-    r"judol|slot\s*gacor|phishing|smishing|malware|apk|spam\w*|"
-    r"sebar\s*data|blokir|hack\w*|investasi\s*bodong|loker\s*fiktif"
+    r"dijual|jual\s*cepat|harga\s*nego|nego\s*di\s*tempat|cek\s*unit|"
+    r"cash\s*dan\s*credit|ready\s*stok|ready\s*\d+|rb/kg|persediaan\s*terbatas|"
+    r"full\s*ori|surat\s*lengkap|pajak\s*hidup|minat\s*hubungi|cod\s*sekitar"
     r")\b"
+)
+
+RE_EXPLICIT_REPORT = re.compile(
+    r"(?i)\b(nomor\s*penipu|no\s*penipu|akun\s*penipu|salah\s*guna\w*|salahgunain|kronologi|viralkan)\b"
 )
 
 DUMMY_NUMBERS = {
@@ -65,6 +78,10 @@ def normalisasi(nomor: str) -> str | None:
     return d
 
 
+def nomor_ke_regex(norm_08: str) -> str:
+    return rf"^(\+62|62|0){norm_08[1:]}$"
+
+
 def muat_daftar_nomor(path: Path) -> set[str]:
     hasil: set[str] = set()
     if not path.exists():
@@ -81,16 +98,6 @@ def muat_daftar_nomor(path: Path) -> set[str]:
     return hasil
 
 
-def aman(teks: str, batas: int = 160) -> str:
-    t = re.sub(r"\s+", " ", teks or "").strip()
-    if len(t) > batas:
-        t = t[:batas].rstrip() + "…"
-    t = t.replace("@", "@\u200b")
-    t = re.sub(r"#(?=\d)", "#\u200b", t)
-    t = t.replace("[", "(").replace("]", ")").replace("`", "'")
-    return t.replace("<", "‹").replace(">", "›").replace("|", "¦")
-
-
 def bersihkan_html(raw_html: str) -> str:
     teks = re.sub(r"<[^>]+>", " ", html.unescape(raw_html or ""))
     return re.sub(r"\s+", " ", teks).strip()
@@ -102,7 +109,7 @@ def fetch_rss(label: str, query: str) -> list[dict] | None:
     req = urllib.request.Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-NomorRadar/5.1; +https://github.com/lonion-1/WhaleGuard)",
+            "User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-NomorRadar/6.0; +https://github.com/lonion-1/WhaleGuard)",
             "Accept": "application/rss+xml, application/xml, text/xml",
         },
     )
@@ -130,10 +137,31 @@ def fetch_rss(label: str, query: str) -> list[dict] | None:
                 "id": f"nr:{guid}",
                 "source": label,
                 "title": title,
-                "url": link,
                 "text": desc,
             })
     return hasil
+
+
+def ekstrak_nomor_valid(teks: str, diabaikan: set[str]) -> set[str]:
+    """Ambil nomor HP hanya jika konteks ±80 karakter di sekitarnya terbukti laporan penipuan/pinjol."""
+    # Buang iklan jual-beli biasa kecuali secara eksplisit melaporkan penipu
+    if RE_COMMERCIAL_NOISE.search(teks) and not RE_EXPLICIT_REPORT.search(teks):
+        return set()
+
+    lolos: set[str] = set()
+    for m in RE_PHONE.finditer(teks):
+        norm = normalisasi(m.group(0))
+        if norm is None or norm in diabaikan:
+            continue
+
+        mulai = max(0, m.start() - 80)
+        akhir = min(len(teks), m.end() + 80)
+        jendela_konteks = teks[mulai:akhir]
+
+        if RE_PROXIMITY_SCAM.search(jendela_konteks):
+            lolos.add(norm)
+
+    return lolos
 
 
 def main() -> int:
@@ -149,8 +177,7 @@ def main() -> int:
             seen_list = []
     seen = set(seen_list)
 
-    temuan = []
-    semua_nomor: set[str] = set()
+    nomor_baru: set[str] = set()
     gagal = 0
 
     for label, q in TARGETS:
@@ -166,72 +193,31 @@ def main() -> int:
             seen.add(sid)
             seen_list.append(sid)
 
-            gabungan = f"{post['title']}\n{post['text']}"
-            if not RE_SCAM_CONTEXT.search(gabungan):
-                continue
-
-            nomor_valid = sorted({
-                n for m in RE_PHONE.finditer(gabungan)
-                if (n := normalisasi(m.group(0))) is not None and n not in diabaikan
-            })
-
-            if not nomor_valid:
-                continue
-
-            semua_nomor.update(nomor_valid)
-            temuan.append({
-                "source": post["source"],
-                "title": aman(post["title"], 120),
-                "url": post["url"],
-                "numbers": nomor_valid,
-            })
+            gabungan = f"{post['title']} | {post['text']}"
+            ditemukan = ekstrak_nomor_valid(gabungan, diabaikan | nomor_baru)
+            if ditemukan:
+                print(f"[+{len(ditemukan)}] {label}: {', '.join(sorted(ditemukan))} <- {post['title'][:90]}")
+                nomor_baru.update(ditemukan)
 
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(json.dumps(seen_list[-MAX_STATE:], indent=2) + "\n", encoding="utf-8")
 
-    gh_out = os.environ.get("GITHUB_OUTPUT")
-
-    def set_output(val: bool):
-        if gh_out:
-            with open(gh_out, "a", encoding="utf-8") as f:
-                f.write(f"has_findings={'true' if val else 'false'}\n")
-
     if gagal == len(TARGETS):
         print("[ERROR] Semua sumber gagal diakses.")
-        set_output(False)
         return 1
 
-    if not temuan:
-        print("Radar Nomor: 0 nomor baru ditemukan. Tidak membuka Issue.")
-        set_output(False)
+    if not nomor_baru:
+        print("Radar Autopilot: 0 nomor baru yang lolos filter ketat.")
         return 0
 
-    daftar_siap_salin = "\n".join(sorted(semua_nomor))
-    L = [
-        "### 📞 Temuan Nomor Telepon Penipu (`WhaleGuard`)",
-        f"Ditemukan **{len(semua_nomor)} nomor baru** dari **{len(temuan)} sumber**:",
-        "",
-        "#### 📋 Daftar Nomor Siap Salin (Tempel ke `inbox/raw_numbers.txt`)",
-        "```text",
-        daftar_siap_salin,
-        "```",
-        "",
-        "#### 🔎 Detail Sumber",
-    ]
-    for it in temuan:
-        nums = ", ".join(f"`{n}`" for n in it["numbers"])
-        L.append(f"* **[{it['source']}]** [{it['title']}]({it['url']}) $\\rightarrow$ {nums}")
+    RULES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    existing_content = RULES_FILE.read_text(encoding="utf-8") if RULES_FILE.exists() else ""
+    if existing_content and not existing_content.endswith("\n"):
+        existing_content += "\n"
 
-    L += [
-        "",
-        "---",
-        "*Filter aktif: nomor yang sudah ada di `rules/numbers-spam-id.txt` atau `rules/numbers-allowlist.txt` otomatis dilewati.*",
-    ]
-
-    body = "\n".join(L)
-    REPORT_FILE.write_text(body + "\n", encoding="utf-8")
-    print("\n" + body)
-    set_output(True)
+    baris_baru = "\n".join(nomor_ke_regex(n) for n in sorted(nomor_baru)) + "\n"
+    RULES_FILE.write_text(existing_content + baris_baru, encoding="utf-8")
+    print(f"[AUTOPILOT SUKSES] {len(nomor_baru)} nomor baru langsung ditambahkan ke {RULES_FILE}.")
     return 0
 
 
