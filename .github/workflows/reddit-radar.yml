@@ -20,22 +20,6 @@ jobs:
         id: radar
         run: python3 scripts/reddit_radar.py
 
-      - name: Simpan catatan riwayat pemindaian
-        if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/reddit_seen.json
-          if ! git diff --staged --quiet; then
-            git commit -m "chore(radar): update seen Reddit posts [skip ci]"
-            for i in 1 2 3; do
-              if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
-                exit 0
-              fi
-              sleep 5
-            done
-          fi
-
       - name: Buka Issue Rangkuman jika ada temuan baru
         if: steps.radar.outputs.has_findings == 'true'
         uses: actions/github-script@v7
@@ -51,3 +35,23 @@ jobs:
               labels: ['radar-intel'],
               body: body
             });
+
+      - name: Simpan catatan riwayat pemindaian
+        if: always()
+        run: |
+          if [ ! -f .github/reddit_seen.json ]; then
+            echo "File state belum ada, melewati commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/reddit_seen.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(radar): update seen Reddit posts [skip ci]"
+            for i in 1 2 3; do
+              if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
+                exit 0
+              fi
+              sleep 5
+            done
+          fi
