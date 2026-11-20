@@ -18,6 +18,7 @@ body:
         - Nomor Telepon Spam / Penipu
         - SMS Promosi Judi Online (Judol)
         - SMS Penipuan / Pinjol Ilegal / File .APK
+        - Salah Blokir (Allowlist)
     validations:
       required: true
 
