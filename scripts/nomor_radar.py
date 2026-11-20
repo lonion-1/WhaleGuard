@@ -1,35 +1,43 @@
 # Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Licensed under the GNU Affero General Public License v3.0.
-"""WhaleGuard Unified Radar (Full-Autopilot + Proximity Context Filter).
+"""WhaleGuard Unified Radar v7.0 (Full-Autopilot Multi-Source + Tight Proximity Filter).
 
-Memindai Reddit, Facebook, dan Telegram:
-1. Mengecek konteks kalimat di sekitar nomor telepon (±80 karakter), bukan sekadar banner grup.
-2. Menolak iklan jualan biasa (motor, makanan, jasa) yang kebetulan ada tulisan "hati-hati penipuan".
-3. Melewati nomor yang sudah tercatat atau dilindungi rules/numbers-allowlist.txt.
-4. Langsung mengonversi & menulis nomor valid ke rules/numbers-spam-id.txt.
+Sumber pencarian:
+1. Reddit Search JSON (r/indonesia, r/finansial, r/indotech, r/all).
+2. Telegram Public Channel Web Preview (https://t.me/s/<channel>).
+3. DuckDuckGo HTML Search (fallback lintas web non-JS).
 """
 import html
 import json
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
-TARGETS = [
-    ("Reddit r/indonesia", "site:reddit.com/r/indonesia (penipu OR penipuan OR pinjol OR judol OR scam OR apk)"),
-    ("Reddit r/finansial", "site:reddit.com/r/finansial (penipu OR penipuan OR pinjol OR phishing OR scam)"),
-    ("Reddit r/indotech", "site:reddit.com/r/indotech (penipu OR penipuan OR spam OR phishing)"),
-    ("Facebook Pinjol", 'site:facebook.com/groups (pinjol OR galbay OR "debt collector" OR teror OR penipu)'),
-    ("Facebook Penipuan", 'site:facebook.com ("nomor penipu" OR "no penipu" OR "akun penipu" OR "salahgunain" OR "undangan apk")'),
-    ("Telegram Pinjol", 'site:t.me/s/ (pinjol OR galbay OR "debt collector" OR teror OR penipu)'),
-    ("Telegram Penipuan", 'site:t.me/s/ ("nomor penipu" OR penipuan OR scam OR judol OR apk)'),
+REDDIT_TARGETS = [
+    ("Reddit r/indonesia", "https://www.reddit.com/r/indonesia/search.json?q=penipu+OR+pinjol+OR+judol+OR+scam+OR+apk&restrict_sr=1&sort=new&t=month&limit=30"),
+    ("Reddit r/finansial", "https://www.reddit.com/r/finansial/search.json?q=penipu+OR+pinjol+OR+phishing+OR+scam+OR+teror&restrict_sr=1&sort=new&t=month&limit=30"),
+    ("Reddit r/indotech", "https://www.reddit.com/r/indotech/search.json?q=penipu+OR+spam+OR+phishing+OR+apk&restrict_sr=1&sort=new&t=month&limit=25"),
+    ("Reddit Global ID", "https://www.reddit.com/search.json?q=%22nomor+penipu%22+OR+%22no+penipu%22+OR+%22undangan+apk%22&sort=new&t=month&limit=25"),
 ]
 
-MAX_STATE = 2500
+# Tambahkan username kanal Telegram publik info penipuan/pinjol di sini (tanpa '@')
+TELEGRAM_CHANNELS = [
+    "infopenipuan",
+    "cekrekening",
+    "korbanpinjol",
+]
+
+DDG_QUERIES = [
+    ("DDG Nomor Penipu", '"nomor penipu" OR "no penipu" "08"'),
+    ("DDG Pinjol Teror", '"teror pinjol" OR "dc pinjol" "08"'),
+]
+
+MAX_STATE = 3000
 STATE_FILE = Path(".github/nomor_radar_seen.json")
 RULES_FILE = Path("rules/numbers-spam-id.txt")
 ALLOWLIST_FILE = Path("rules/numbers-allowlist.txt")
@@ -37,7 +45,7 @@ ALLOWLIST_FILE = Path("rules/numbers-allowlist.txt")
 RE_PHONE = re.compile(r"(?<![\d+])(?:\+62|62|0)8[1-9](?:[ .\-]?\d){6,10}(?!\d)")
 RE_EXISTING_RULE = re.compile(r"^\^?\(\\?\+62\|62\|0\)(8\d{8,11})\$?$")
 
-# Kata kunci bukti kuat yang HARUS muncul dekat nomor telepon (±80 karakter)
+# Kata kunci bukti kuat yang HARUS muncul dalam jarak ±55 karakter dari nomor telepon
 RE_PROXIMITY_SCAM = re.compile(
     r"(?i)("
     r"\b(?:no|nomor|wa|whatsapp|tlp|telp)\s*(?:penipu|pelaku|dc|teror|dia|nya)\b|"
@@ -46,6 +54,14 @@ RE_PROXIMITY_SCAM = re.compile(
     r"\b(?:judol|slot\s*gacor|phishing|smishing|malware|apk|undangan\s*apk)\b|"
     r"\b(?:akun\s*palsu|atas\s*nama|kronologi|viralkan|bantu\s*up)\b"
     r")"
+)
+
+# Tolak jika tepat di dekat nomor (±45 karakter) tercantum sebagai CS/kurir resmi
+RE_OFFICIAL_CS_NOISE = re.compile(
+    r"(?i)\b("
+    r"call\s*center|cs\s*resmi|customer\s*service|layanan\s*pengaduan|"
+    r"halo\s*bca|bri\s*call|mandiri\s*call|bni\s*call|no\s*resi|nomor\s*resi"
+    r")\b"
 )
 
 # Ciri iklan jual-beli biasa (dibuang kecuali ada bukti penipuan eksplisit)
@@ -88,7 +104,7 @@ def muat_daftar_nomor(path: Path) -> set[str]:
         return hasil
     for line in path.read_text(encoding="utf-8").splitlines():
         s = line.split("#", 1)[0].strip()
-        if not s:
+        if not s or s.startswith("!"):
             continue
         m = RE_EXISTING_RULE.match(s)
         if m:
@@ -103,48 +119,87 @@ def bersihkan_html(raw_html: str) -> str:
     return re.sub(r"\s+", " ", teks).strip()
 
 
-def fetch_rss(label: str, query: str) -> list[dict] | None:
-    encoded = urllib.parse.quote(query)
-    url = f"https://news.google.com/rss/search?q={encoded}&hl=id&gl=ID&ceid=ID:id"
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (compatible; WhaleGuard-NomorRadar/6.0; +https://github.com/lonion-1/WhaleGuard)",
-            "Accept": "application/rss+xml, application/xml, text/xml",
-        },
-    )
+def http_get(url: str, user_agent: str) -> str | None:
+    req = urllib.request.Request(url, headers={"User-Agent": user_agent})
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            xml_data = r.read().decode("utf-8", errors="ignore")
+        with urllib.request.urlopen(req, timeout=25) as r:
+            return r.read().decode("utf-8", errors="ignore")
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        print(f"[ERROR] {label}: {e}")
+        print(f"[WARN] Gagal akses {url[:75]}: {e}")
         return None
 
+
+def fetch_reddit(label: str, url: str) -> list[dict]:
+    raw = http_get(url, "linux:whaleguard-radar:v7.0 (by /u/EazyWhale)")
+    if not raw:
+        return []
     try:
-        root = ET.fromstring(xml_data)
-    except ET.ParseError as e:
-        print(f"[ERROR] XML {label}: {e}")
-        return None
+        data = json.loads(raw)
+        children = data.get("data", {}).get("children", [])
+    except Exception as e:
+        print(f"[WARN] Gagal parse JSON {label}: {e}")
+        return []
 
     hasil = []
-    for it in root.findall(".//item"):
-        title = (it.findtext("title") or "").strip()
-        link = (it.findtext("link") or "").strip()
-        guid = (it.findtext("guid") or link).strip()
-        desc = bersihkan_html(it.findtext("description") or "")
-        if guid and link:
+    for item in children:
+        d = item.get("data", {})
+        pid = d.get("id")
+        if not pid:
+            continue
+        hasil.append({
+            "id": f"rd:{pid}",
+            "source": label,
+            "title": (d.get("title") or "").strip(),
+            "text": (d.get("selftext") or "").strip(),
+        })
+    return hasil
+
+
+def fetch_telegram_channel(channel: str) -> list[dict]:
+    url = f"https://t.me/s/{channel}"
+    raw = http_get(url, "Mozilla/5.0 (X11; Linux x86_64) WhaleGuard-Radar/7.0")
+    if not raw:
+        return []
+
+    hasil = []
+    blocks = re.findall(
+        r'data-post="([^"]+)"[\s\S]*?<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)</div>',
+        raw,
+    )
+    for post_id, msg_html in blocks:
+        clean = bersihkan_html(msg_html)
+        if clean:
             hasil.append({
-                "id": f"nr:{guid}",
+                "id": f"tg:{post_id}",
+                "source": f"Telegram @{channel}",
+                "title": clean[:90],
+                "text": clean,
+            })
+    return hasil
+
+
+def fetch_ddg(label: str, query: str) -> list[dict]:
+    encoded = urllib.parse.quote(query)
+    url = f"https://html.duckduckgo.com/html/?q={encoded}"
+    raw = http_get(url, "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0")
+    if not raw:
+        return []
+
+    hasil = []
+    snippets = re.findall(r'<a class="result__snippet"[^>]*>([\s\S]*?)</a>', raw)
+    for idx, snip_html in enumerate(snippets):
+        clean = bersihkan_html(snip_html)
+        if clean:
+            hasil.append({
+                "id": f"ddg:{hash(clean)}",
                 "source": label,
-                "title": title,
-                "text": desc,
+                "title": clean[:90],
+                "text": clean,
             })
     return hasil
 
 
 def ekstrak_nomor_valid(teks: str, diabaikan: set[str]) -> set[str]:
-    """Ambil nomor HP hanya jika konteks ±80 karakter di sekitarnya terbukti laporan penipuan/pinjol."""
-    # Buang iklan jual-beli biasa kecuali secara eksplisit melaporkan penipu
     if RE_COMMERCIAL_NOISE.search(teks) and not RE_EXPLICIT_REPORT.search(teks):
         return set()
 
@@ -154,10 +209,11 @@ def ekstrak_nomor_valid(teks: str, diabaikan: set[str]) -> set[str]:
         if norm is None or norm in diabaikan:
             continue
 
-        mulai = max(0, m.start() - 80)
-        akhir = min(len(teks), m.end() + 80)
-        jendela_konteks = teks[mulai:akhir]
+        jendela_ketat = teks[max(0, m.start() - 45):min(len(teks), m.end() + 45)]
+        if RE_OFFICIAL_CS_NOISE.search(jendela_ketat):
+            continue
 
+        jendela_konteks = teks[max(0, m.start() - 55):min(len(teks), m.end() + 55)]
         if RE_PROXIMITY_SCAM.search(jendela_konteks):
             lolos.add(norm)
 
@@ -177,34 +233,36 @@ def main() -> int:
             seen_list = []
     seen = set(seen_list)
 
+    semua_post: list[dict] = []
+
+    for label, url in REDDIT_TARGETS:
+        semua_post.extend(fetch_reddit(label, url))
+        time.sleep(1.5)
+
+    for ch in TELEGRAM_CHANNELS:
+        semua_post.extend(fetch_telegram_channel(ch))
+        time.sleep(1.0)
+
+    for label, q in DDG_QUERIES:
+        semua_post.extend(fetch_ddg(label, q))
+        time.sleep(3.0)
+
     nomor_baru: set[str] = set()
-    gagal = 0
-
-    for label, q in TARGETS:
-        posts = fetch_rss(label, q)
-        if posts is None:
-            gagal += 1
+    for post in semua_post:
+        sid = post["id"]
+        if sid in seen:
             continue
+        seen.add(sid)
+        seen_list.append(sid)
 
-        for post in posts:
-            sid = post["id"]
-            if sid in seen:
-                continue
-            seen.add(sid)
-            seen_list.append(sid)
-
-            gabungan = f"{post['title']} | {post['text']}"
-            ditemukan = ekstrak_nomor_valid(gabungan, diabaikan | nomor_baru)
-            if ditemukan:
-                print(f"[+{len(ditemukan)}] {label}: {', '.join(sorted(ditemukan))} <- {post['title'][:90]}")
-                nomor_baru.update(ditemukan)
+        gabungan = f"{post['title']} | {post['text']}"
+        ditemukan = ekstrak_nomor_valid(gabungan, diabaikan | nomor_baru)
+        if ditemukan:
+            print(f"[+{len(ditemukan)}] {post['source']}: {', '.join(sorted(ditemukan))} <- {post['title'][:80]}")
+            nomor_baru.update(ditemukan)
 
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(json.dumps(seen_list[-MAX_STATE:], indent=2) + "\n", encoding="utf-8")
-
-    if gagal == len(TARGETS):
-        print("[ERROR] Semua sumber gagal diakses.")
-        return 1
 
     if not nomor_baru:
         print("Radar Autopilot: 0 nomor baru yang lolos filter ketat.")
@@ -217,7 +275,7 @@ def main() -> int:
 
     baris_baru = "\n".join(nomor_ke_regex(n) for n in sorted(nomor_baru)) + "\n"
     RULES_FILE.write_text(existing_content + baris_baru, encoding="utf-8")
-    print(f"[AUTOPILOT SUKSES] {len(nomor_baru)} nomor baru langsung ditambahkan ke {RULES_FILE}.")
+    print(f"[AUTOPILOT SUKSES] {len(nomor_baru)} nomor baru ditambahkan ke {RULES_FILE}.")
     return 0
 
 
