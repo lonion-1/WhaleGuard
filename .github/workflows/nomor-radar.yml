@@ -2,15 +2,20 @@ name: Radar Nomor Autopilot (WhaleGuard)
 
 on:
   schedule:
-    - cron: '0 22 * * *' # Cadangan otomatis setiap hari pukul 05:00 WIB
+    - cron: '0 22 * * *' # Jalan otomatis setiap hari pukul 05:00 WIB
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: whaleguard-rules
+  cancel-in-progress: false
+
 jobs:
   scan-and-commit:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repo WhaleGuard
         uses: actions/checkout@v4
@@ -18,23 +23,22 @@ jobs:
       - name: Pindai & panen otomatis nomor penipu ke rules
         run: python3 scripts/nomor_radar.py
 
-      - name: Jalankan validator anti-false-positive
-        run: |
-          if [ -f scripts/validate_and_build.py ]; then
-            python3 scripts/validate_and_build.py
-          fi
+      - name: Jalankan validator anti-false-positive & sinkronisasi allowlist
+        run: python3 scripts/validate_and_build.py
 
-      - name: Commit otomatis aturan & riwayat radar
+      - name: Commit otomatis aturan, riwayat radar & README
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add rules/numbers-spam-id.txt .github/nomor_radar_seen.json
+          git add rules/ .github/nomor_radar_seen.json README.md last-run.txt
           if ! git diff --staged --quiet; then
             git commit -m "chore(radar): auto-add nomor penipu baru [skip ci]"
             for i in 1 2 3; do
               if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
                 exit 0
               fi
+              git rebase --abort 2>/dev/null || true
               sleep 5
             done
+            exit 1
           fi
