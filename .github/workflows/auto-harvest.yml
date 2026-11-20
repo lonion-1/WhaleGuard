@@ -1,26 +1,35 @@
 name: Auto-Harvester & Sapu Bersih (WhaleGuard)
-# Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
-# SPDX-License-Identifier: AGPL-3.0-or-later
-# Licensed under the GNU Affero General Public License v3.0.
 
 on:
   push:
     paths:
       - 'inbox/raw_numbers.txt'
       - 'rules/numbers-allowlist.txt'
+  issues:
+    types: [opened]
   schedule:
-    - cron: '0 23 * * *' # Cadangan otomatis pukul 06:00 WIB
+    - cron: '0 23 * * *' # Cadangan otomatis setiap hari pukul 06:00 WIB
   workflow_dispatch:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   harvest-numbers:
+    if: github.event_name != 'issues' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo WhaleGuard
         uses: actions/checkout@v4
+
+      - name: Tampung isi Issue baru ke inbox (jika pemicunya Issue)
+        if: github.event_name == 'issues'
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          printf "\n%s\n%s\n" "$ISSUE_TITLE" "$ISSUE_BODY" >> inbox/raw_numbers.txt
 
       - name: Panen nomor baru & sapu bersih allowlist
         run: python3 scripts/number_harvester.py
@@ -45,3 +54,21 @@ jobs:
               sleep 5
             done
           fi
+
+      - name: Tutup Issue laporan yang sudah diproses
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '✅ Nomor valid dari laporan ini telah otomatis dipanen ke `rules/numbers-spam-id.txt` (dilindungi filter allowlist).'
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed'
+            });
