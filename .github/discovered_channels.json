@@ -11,6 +11,22 @@
     "scamdetector_id": {
       "misses": 0,
       "source": "seed"
+    },
+    "penipustarsp": {
+      "misses": 0,
+      "source": "snowball"
+    },
+    "gagalbayar": {
+      "misses": 0,
+      "source": "directory"
+    },
+    "penipunokoshopee": {
+      "misses": 0,
+      "source": "snowball"
+    },
+    "hatihaticlonerekber": {
+      "misses": 0,
+      "source": "snowball"
     }
   },
   "rejected": [
@@ -23,6 +39,12 @@
     "strawberryyeww",
     "taralokaa",
     "hhoteI",
-    "CaaIon"
+    "CaaIon",
+    "spillmalinggpt",
+    "kasinopenipu",
+    "hancurrak",
+    "di40indonesia",
+    "jjjsjsjskh",
+    "penipukon"
   ]
 }
