@@ -1,55 +1,36 @@
-name: Radar Nomor Sosmed (WhaleGuard)
-# Copyright (c) 2026 EazyWhale (https://github.com/lonion-1/WhaleGuard)
-# SPDX-License-Identifier: AGPL-3.0-or-later
-# Licensed under the GNU Affero General Public License v3.0.
+name: Radar Nomor Autopilot (WhaleGuard)
 
 on:
   schedule:
-    - cron: '0 22 * * *' # Jalan otomatis setiap hari pukul 05:00 WIB
+    - cron: '0 22 * * *' # Cadangan otomatis setiap hari pukul 05:00 WIB
   workflow_dispatch:
 
 permissions:
   contents: write
-  issues: write
 
 jobs:
-  scan-nomor:
+  scan-and-commit:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo WhaleGuard
         uses: actions/checkout@v4
 
-      - name: Pindai khusus nomor telepon dari Reddit, FB & Telegram
-        id: radar
+      - name: Pindai & panen otomatis nomor penipu ke rules
         run: python3 scripts/nomor_radar.py
 
-      - name: Buka Issue hanya jika ada nomor telepon baru
-        if: steps.radar.outputs.has_findings == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const body = fs.readFileSync('nomor_report.md', 'utf8');
-            const tgl = new Date().toISOString().slice(0, 10);
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `[Radar Nomor]: ${tgl}`,
-              labels: ['radar-intel'],
-              body: body
-            });
-
-      - name: Simpan riwayat pemindaian
-        if: always()
+      - name: Jalankan validator anti-false-positive
         run: |
-          if [ ! -f .github/nomor_radar_seen.json ]; then
-            exit 0
+          if [ -f scripts/validate_and_build.py ]; then
+            python3 scripts/validate_and_build.py
           fi
+
+      - name: Commit otomatis aturan & riwayat radar
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/nomor_radar_seen.json
+          git add rules/numbers-spam-id.txt .github/nomor_radar_seen.json
           if ! git diff --staged --quiet; then
-            git commit -m "chore(radar): update seen items [skip ci]"
+            git commit -m "chore(radar): auto-add nomor penipu baru [skip ci]"
             for i in 1 2 3; do
               if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
                 exit 0
