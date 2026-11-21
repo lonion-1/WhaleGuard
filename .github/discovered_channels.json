@@ -2,247 +2,247 @@
   "channels": {
     "rekampenipu": {
       "source": "seed",
-      "scans": 3,
+      "scans": 4,
       "harvested": 0,
-      "dry_runs": 3,
+      "dry_runs": 4,
       "misses": 0
     },
     "cekrekening": {
       "source": "seed",
-      "scans": 3,
+      "scans": 4,
       "harvested": 0,
-      "dry_runs": 3,
+      "dry_runs": 4,
       "misses": 0
     },
     "scamdetector_id": {
       "source": "seed",
-      "scans": 3,
+      "scans": 4,
       "harvested": 0,
-      "dry_runs": 3,
+      "dry_runs": 4,
       "misses": 0
     },
     "pantaupenipu": {
       "source": "snowball",
-      "scans": 2,
+      "scans": 3,
       "harvested": 8,
-      "dry_runs": 1,
-      "misses": 0
-    },
-    "penipustarsp": {
-      "source": "snowball",
-      "scans": 3,
-      "harvested": 0,
-      "dry_runs": 3,
-      "misses": 0
-    },
-    "gagalbayar": {
-      "source": "directory",
-      "scans": 3,
-      "harvested": 0,
-      "dry_runs": 3,
-      "misses": 0
-    },
-    "penipunokoshopee": {
-      "source": "snowball",
-      "scans": 3,
-      "harvested": 0,
-      "dry_runs": 3,
-      "misses": 0
-    },
-    "hatihaticlonerekber": {
-      "source": "snowball",
-      "scans": 3,
-      "harvested": 0,
-      "dry_runs": 3,
-      "misses": 0
-    },
-    "darloxa_penipu_nokos": {
-      "source": "directory",
-      "scans": 3,
-      "harvested": 0,
-      "dry_runs": 3,
-      "misses": 0
-    },
-    "linkpinjol": {
-      "source": "directory",
-      "scans": 3,
-      "harvested": 0,
-      "dry_runs": 3,
-      "misses": 0
-    },
-    "maswitjaksono": {
-      "source": "directory",
-      "scans": 3,
-      "harvested": 0,
-      "dry_runs": 3,
-      "misses": 0
-    },
-    "krbnpenipu": {
-      "source": "snowball",
-      "scans": 3,
-      "harvested": 0,
-      "dry_runs": 3,
-      "misses": 0
-    },
-    "penipucellaaaqg": {
-      "source": "snowball",
-      "scans": 2,
-      "harvested": 0,
       "dry_runs": 2,
-      "misses": 0
-    },
-    "penipuangrup": {
-      "source": "snowball",
-      "scans": 2,
-      "harvested": 0,
-      "dry_runs": 2,
-      "misses": 0
-    },
-    "pnipunokshop": {
-      "source": "snowball",
-      "scans": 2,
-      "harvested": 0,
-      "dry_runs": 2,
-      "misses": 0
-    },
-    "penipumemekpuqi": {
-      "source": "snowball",
-      "scans": 2,
-      "harvested": 0,
-      "dry_runs": 2,
-      "misses": 0
-    },
-    "penipuanjbgt12356": {
-      "source": "snowball",
-      "scans": 2,
-      "harvested": 0,
-      "dry_runs": 2,
-      "misses": 0
-    },
-    "celahhpenipu": {
-      "source": "snowball",
-      "scans": 2,
-      "harvested": 0,
-      "dry_runs": 2,
-      "misses": 0
-    },
-    "penipunyed": {
-      "source": "snowball",
-      "scans": 2,
-      "harvested": 0,
-      "dry_runs": 2,
-      "misses": 0
-    },
-    "penipunokwaanjing": {
-      "source": "snowball",
-      "scans": 2,
-      "harvested": 0,
-      "dry_runs": 2,
-      "misses": 0
-    },
-    "pencetss": {
-      "source": "snowball",
-      "scans": 1,
-      "harvested": 0,
-      "dry_runs": 1,
-      "misses": 0
-    },
-    "peniopuu": {
-      "source": "snowball",
-      "scans": 1,
-      "harvested": 0,
-      "dry_runs": 1,
-      "misses": 0
-    },
-    "kronologipenipuan2": {
-      "source": "snowball",
-      "scans": 1,
-      "harvested": 0,
-      "dry_runs": 1,
-      "misses": 0
-    },
-    "nipudick": {
-      "source": "snowball",
-      "scans": 1,
-      "harvested": 0,
-      "dry_runs": 1,
-      "misses": 0
-    },
-    "spillbuyercaca": {
-      "source": "snowball",
-      "scans": 1,
-      "harvested": 0,
-      "dry_runs": 1,
-      "misses": 0
-    },
-    "kronologiscm": {
-      "source": "snowball",
-      "scans": 1,
-      "harvested": 0,
-      "dry_runs": 1,
-      "misses": 0
-    },
-    "Orangnipumiskin": {
-      "source": "snowball",
-      "scans": 1,
-      "harvested": 0,
-      "dry_runs": 1,
-      "misses": 0
-    },
-    "Tjerpidana": {
-      "source": "snowball",
-      "scans": 1,
-      "harvested": 0,
-      "dry_runs": 1,
-      "misses": 0
-    },
-    "bocahscamer": {
-      "source": "snowball",
-      "scans": 0,
-      "harvested": 0,
-      "dry_runs": 0,
-      "misses": 0
-    },
-    "penipucvjanganpercaya": {
-      "source": "snowball",
-      "scans": 0,
-      "harvested": 0,
-      "dry_runs": 0,
-      "misses": 0
-    },
-    "klarifajaa": {
-      "source": "snowball",
-      "scans": 0,
-      "harvested": 0,
-      "dry_runs": 0,
-      "misses": 0
-    },
-    "tlikar": {
-      "source": "snowball",
-      "scans": 0,
-      "harvested": 0,
-      "dry_runs": 0,
-      "misses": 0
-    },
-    "penipubangsatgiflec": {
-      "source": "snowball",
-      "scans": 0,
-      "harvested": 0,
-      "dry_runs": 0,
       "misses": 0
     },
     "MUODUAR": {
       "source": "snowball",
-      "scans": 0,
-      "harvested": 0,
+      "scans": 1,
+      "harvested": 1,
       "dry_runs": 0,
+      "misses": 0
+    },
+    "penipustarsp": {
+      "source": "snowball",
+      "scans": 4,
+      "harvested": 0,
+      "dry_runs": 4,
+      "misses": 0
+    },
+    "gagalbayar": {
+      "source": "directory",
+      "scans": 4,
+      "harvested": 0,
+      "dry_runs": 4,
+      "misses": 0
+    },
+    "penipunokoshopee": {
+      "source": "snowball",
+      "scans": 4,
+      "harvested": 0,
+      "dry_runs": 4,
+      "misses": 0
+    },
+    "hatihaticlonerekber": {
+      "source": "snowball",
+      "scans": 4,
+      "harvested": 0,
+      "dry_runs": 4,
+      "misses": 0
+    },
+    "darloxa_penipu_nokos": {
+      "source": "directory",
+      "scans": 4,
+      "harvested": 0,
+      "dry_runs": 4,
+      "misses": 0
+    },
+    "linkpinjol": {
+      "source": "directory",
+      "scans": 4,
+      "harvested": 0,
+      "dry_runs": 4,
+      "misses": 0
+    },
+    "maswitjaksono": {
+      "source": "directory",
+      "scans": 4,
+      "harvested": 0,
+      "dry_runs": 4,
+      "misses": 0
+    },
+    "krbnpenipu": {
+      "source": "snowball",
+      "scans": 4,
+      "harvested": 0,
+      "dry_runs": 4,
+      "misses": 0
+    },
+    "penipucellaaaqg": {
+      "source": "snowball",
+      "scans": 3,
+      "harvested": 0,
+      "dry_runs": 3,
+      "misses": 0
+    },
+    "penipuangrup": {
+      "source": "snowball",
+      "scans": 3,
+      "harvested": 0,
+      "dry_runs": 3,
+      "misses": 0
+    },
+    "pnipunokshop": {
+      "source": "snowball",
+      "scans": 3,
+      "harvested": 0,
+      "dry_runs": 3,
+      "misses": 0
+    },
+    "penipumemekpuqi": {
+      "source": "snowball",
+      "scans": 3,
+      "harvested": 0,
+      "dry_runs": 3,
+      "misses": 0
+    },
+    "penipuanjbgt12356": {
+      "source": "snowball",
+      "scans": 3,
+      "harvested": 0,
+      "dry_runs": 3,
+      "misses": 0
+    },
+    "celahhpenipu": {
+      "source": "snowball",
+      "scans": 3,
+      "harvested": 0,
+      "dry_runs": 3,
+      "misses": 0
+    },
+    "penipunyed": {
+      "source": "snowball",
+      "scans": 3,
+      "harvested": 0,
+      "dry_runs": 3,
+      "misses": 0
+    },
+    "penipunokwaanjing": {
+      "source": "snowball",
+      "scans": 3,
+      "harvested": 0,
+      "dry_runs": 3,
+      "misses": 0
+    },
+    "pencetss": {
+      "source": "snowball",
+      "scans": 2,
+      "harvested": 0,
+      "dry_runs": 2,
+      "misses": 0
+    },
+    "peniopuu": {
+      "source": "snowball",
+      "scans": 2,
+      "harvested": 0,
+      "dry_runs": 2,
+      "misses": 0
+    },
+    "kronologipenipuan2": {
+      "source": "snowball",
+      "scans": 2,
+      "harvested": 0,
+      "dry_runs": 2,
+      "misses": 0
+    },
+    "nipudick": {
+      "source": "snowball",
+      "scans": 2,
+      "harvested": 0,
+      "dry_runs": 2,
+      "misses": 0
+    },
+    "spillbuyercaca": {
+      "source": "snowball",
+      "scans": 2,
+      "harvested": 0,
+      "dry_runs": 2,
+      "misses": 0
+    },
+    "kronologiscm": {
+      "source": "snowball",
+      "scans": 2,
+      "harvested": 0,
+      "dry_runs": 2,
+      "misses": 0
+    },
+    "Orangnipumiskin": {
+      "source": "snowball",
+      "scans": 2,
+      "harvested": 0,
+      "dry_runs": 2,
+      "misses": 0
+    },
+    "Tjerpidana": {
+      "source": "snowball",
+      "scans": 2,
+      "harvested": 0,
+      "dry_runs": 2,
+      "misses": 0
+    },
+    "bocahscamer": {
+      "source": "snowball",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
+    },
+    "penipucvjanganpercaya": {
+      "source": "snowball",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
+    },
+    "klarifajaa": {
+      "source": "snowball",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
+    },
+    "tlikar": {
+      "source": "snowball",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
+      "misses": 0
+    },
+    "penipubangsatgiflec": {
+      "source": "snowball",
+      "scans": 1,
+      "harvested": 0,
+      "dry_runs": 1,
       "misses": 0
     },
     "adapenipuuuu": {
       "source": "snowball",
-      "scans": 0,
+      "scans": 1,
       "harvested": 0,
-      "dry_runs": 0,
+      "dry_runs": 1,
       "misses": 0
     }
   },
