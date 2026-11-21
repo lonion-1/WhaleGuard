@@ -1,0 +1,52 @@
+[scam]
+explicit_report_regex = [
+  '(?:no|nomor|wa|whatsapp|tlp|telp)\s*(?:penipu|pelaku|dc|teror|scammer|spammer)',
+  '(?:penipu|pelaku|akun)\s*(?:pakai|pake|menggunakan|atas\s*nama|mengaku)',
+  'salah\s*guna\w*', 'salahgunain', 'kronologi', 'viralkan', 'bantu\s*up',
+  'blacklist\s*(?:nomor|no|wa)', 'teror\s*(?:pinjol|dc|debt\s*collector)',
+  'sebar\s*(?:data|kontak|ktp)', 'undangan\s*apk', 'file\s*apk',
+  'penipuan\s*(?:wa|whatsapp|online|segitiga|giveaway|loker|investasi)',
+]
+
+proximity_regex = [
+  'penipu\w*', 'nipu', 'scam\w*', 'bajak', 'hack\w*', 'ambil\s*alih',
+  'pinjol', 'galbay', 'dc\b', 'debt\s*collector', 'teror\w*', 'ancam\w*',
+  'judol', 'slot\s*gacor', 'phishing', 'smishing', 'malware', '\bapk\b',
+  'akun\s*palsu', 'atas\s*nama', 'mengatasnamakan', 'rekber\s*palsu',
+  'modus', 'waspada', 'hati[\s-]*hati', 'korban', 'lapor\w*', 'tipu\w*',
+  'transfer\s*ke', 'minta\s*tf', 'otp', 'kode\s*verifikasi',
+]
+
+impersonation_override_regex = [
+  'penipu\w*', 'nipu', 'palsu', 'fake', 'mengaku', 'ngaku',
+  'mengatasnamakan', 'atas\s*nama', 'modus', 'waspada', 'hati[\s-]*hati',
+  'korban', 'bukan\s*(?:cs|resmi)', 'hati2',
+]
+
+[noise]
+official_cs_regex = [
+  'call\s*center', 'cs\s*resmi', 'customer\s*service', 'layanan\s*pengaduan',
+  'halo\s*bca', 'bri\s*call', 'mandiri\s*call', 'bni\s*call',
+  'no\s*resi', 'nomor\s*resi', 'cek\s*resi',
+]
+
+commercial_regex = [
+  'dijual', 'jual\s*cepat', 'harga\s*nego', 'nego\s*di\s*tempat', 'cek\s*unit',
+  'cash\s*dan\s*credit', 'ready\s*stok', 'ready\s*\d+', 'rb/kg',
+  'persediaan\s*terbatas', 'full\s*ori', 'surat\s*lengkap', 'pajak\s*hidup',
+  'minat\s*hubungi', 'cod\s*sekitar', 'open\s*po', 'open\s*order',
+  'booking\s*fee', 'cicilan\s*ringan', 'dp\s*murah', 'kredit\s*syariah',
+]
+
+[relevance]
+topic_regex = [
+  'penipu\w*', 'nipu', 'scam\w*', 'pinjol', 'galbay', 'debt\s*collector',
+  'teror\w*', 'blacklist', 'cek\s*rekening', 'rekber', 'waspada',
+  'korban', 'lapor\w*', 'judol', 'phishing', 'sebar\s*data', 'dc\s*lapangan',
+]
+
+indonesian_hint = [
+  'yang', 'dan', 'ini', 'itu', 'tidak', 'ada', 'korban', 'nomor', 'rekening',
+  'uang', 'rp', 'akun', 'waspada', 'pinjol', 'galbay', 'penipu', 'jangan',
+  'kalau', 'kalo', 'bisa', 'sudah', 'udah', 'mau', 'tolong', 'hati',
+]
