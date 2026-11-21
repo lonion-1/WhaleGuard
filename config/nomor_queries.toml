@@ -19,3 +19,11 @@ queries = [
   "nomor scammer indonesia",
   "penipu mengatasnamakan",
 ]
+
+[[web_sources]]
+name = "whaleindex_scam_phones_asean"
+url = "https://raw.githubusercontent.com/lonion-1/WhaleIndex/main/feeds/scam_phones_asean_latest.txt"
+
+[[web_sources]]
+name = "whaleindex_open_communities"
+url = "https://raw.githubusercontent.com/lonion-1/WhaleIndex/main/feeds/open_communities_latest.txt"
