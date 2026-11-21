@@ -1,0 +1,36 @@
+dummy_numbers = [
+  "0812345678",
+  "08123456789",
+  "081234567890",
+  "0812345678901",
+  "08987654321",
+  "081122334455",
+  "081212121212",
+  "08123123123",
+]
+
+reserved_tg_names = [
+  "joinchat", "addstickers", "addtheme", "setlanguage", "share", "proxy",
+  "socks", "confirmphone", "iv", "login", "contact", "support", "telegram",
+  "admin", "channel", "group", "botfather", "spaminfo", "cekrekening_bot",
+  "s", "c", "bg", "setlang",
+]
+
+blocked_web_suffixes = [
+  ".go.id", ".mil.id", ".ac.id", ".sch.id", ".desa.id",
+  ".gov", ".mil", ".edu",
+]
+
+blocked_web_domains = [
+  "google.com", "google.co.id", "gstatic.com", "googleapis.com",
+  "youtube.com", "youtu.be", "instagram.com", "tiktok.com",
+  "twitter.com", "x.com", "threads.net", "linkedin.com",
+  "whatsapp.com", "wa.me", "t.me", "telegram.me", "telegram.org",
+  "reddit.com", "redd.it", "imgur.com", "giphy.com",
+  "tokopedia.com", "shopee.co.id", "lazada.co.id", "bukalapak.com", "blibli.com",
+  "bca.co.id", "bri.co.id", "bankmandiri.co.id", "bni.co.id",
+  "ojk.go.id", "komdigi.go.id", "kominfo.go.id", "polri.go.id",
+  "bit.ly", "tinyurl.com", "s.id", "linktr.ee", "forms.gle", "docs.google.com",
+  "play.google.com", "apps.apple.com", "github.com", "githubusercontent.com",
+  "wikipedia.org", "wikimedia.org",
+]
