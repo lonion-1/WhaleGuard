@@ -1,0 +1,43 @@
+time_budget_seconds = 420
+finalize_reserve_seconds = 45
+polite_sleep = 1.0
+http_trip_after = 4
+
+promote_at = 3
+score_explicit_report = 3
+score_proximity_scam = 2
+score_page_context = 1
+max_new_numbers_per_run = 200
+max_promoted_per_source = 60
+pending_ttl_days = 21
+pending_max = 3000
+
+retire_hard_days = 4
+retire_soft_days = 14
+max_cooldown_hours = 72
+parole_days = 30
+reject_recheck_days = 30
+
+tg_channels_per_run = 25
+tg_max_channels = 80
+tg_max_pages = 4
+tg_max_dry_runs = 25
+tg_verify_per_run = 15
+tg_discovery_queries_per_run = 3
+tg_require_indonesian = true
+tg_queue_max = 400
+
+reddit_enabled = true
+reddit_queries_per_run = 3
+reddit_subreddits_per_run = 2
+reddit_posts_limit = 25
+reddit_comments_per_run = 10
+reddit_seen_max = 2500
+
+web_enabled = true
+web_pages_per_run = 18
+web_max_per_domain = 4
+web_max_queue = 500
+web_max_depth = 1
+web_fb_enabled = true
+web_fb_max_per_run = 5
