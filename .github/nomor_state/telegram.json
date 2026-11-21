@@ -1,11 +1,16 @@
 {
   "channels": {
     "Apoteikerpenipu": {
-      "dry_runs": 0,
+      "cool_until": 0,
+      "dry_runs": 1,
+      "fails": 0,
+      "hard_days": [],
       "harvested": 0,
-      "last_post": 0,
-      "last_scan": 0,
-      "scans": 0,
+      "last_ok": 1795266031,
+      "last_post": 18,
+      "last_scan": 1795266031,
+      "scans": 1,
+      "soft_days": [],
       "source": "snowball:@pantaupenipu"
     },
     "MUODUAR": {
@@ -14,10 +19,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 1,
-      "last_ok": 1795251630,
+      "last_ok": 1795266031,
       "last_post": 37,
-      "last_scan": 1795251630,
-      "scans": 4,
+      "last_scan": 1795266031,
+      "scans": 5,
       "soft_days": [],
       "source": "snowball"
     },
@@ -27,10 +32,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795251630,
+      "last_ok": 1795266031,
       "last_post": 92,
-      "last_scan": 1795251630,
-      "scans": 5,
+      "last_scan": 1795266031,
+      "scans": 6,
       "soft_days": [],
       "source": "snowball"
     },
@@ -40,10 +45,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795251630,
+      "last_ok": 1795266031,
       "last_post": 51,
-      "last_scan": 1795251630,
-      "scans": 5,
+      "last_scan": 1795266031,
+      "scans": 6,
       "soft_days": [],
       "source": "snowball"
     },
@@ -53,10 +58,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795251630,
+      "last_ok": 1795266031,
       "last_post": 17,
-      "last_scan": 1795251630,
-      "scans": 4,
+      "last_scan": 1795266031,
+      "scans": 5,
       "soft_days": [],
       "source": "snowball"
     },
@@ -66,10 +71,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795251630,
+      "last_ok": 1795266031,
       "last_post": 22,
-      "last_scan": 1795251630,
-      "scans": 4,
+      "last_scan": 1795266031,
+      "scans": 5,
       "soft_days": [],
       "source": "snowball"
     },
@@ -79,10 +84,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 7,
-      "last_ok": 1795251630,
+      "last_ok": 1795266031,
       "last_post": 35,
-      "last_scan": 1795251630,
-      "scans": 7,
+      "last_scan": 1795266031,
+      "scans": 8,
       "soft_days": [],
       "source": "seed"
     },
@@ -92,10 +97,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795251630,
+      "last_ok": 1795266031,
       "last_post": 19,
-      "last_scan": 1795251630,
-      "scans": 6,
+      "last_scan": 1795266031,
+      "scans": 7,
       "soft_days": [],
       "source": "snowball"
     },
@@ -144,10 +149,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 21,
-      "last_scan": 1795245323,
-      "scans": 3,
+      "last_scan": 1795266031,
+      "scans": 4,
       "soft_days": [],
       "source": "snowball"
     },
@@ -157,10 +162,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 12,
-      "last_scan": 1795245323,
-      "scans": 6,
+      "last_scan": 1795266031,
+      "scans": 7,
       "soft_days": [],
       "source": "snowball"
     },
@@ -183,10 +188,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 23,
-      "last_scan": 1795245323,
-      "scans": 4,
+      "last_scan": 1795266031,
+      "scans": 5,
       "soft_days": [],
       "source": "snowball"
     },
@@ -196,10 +201,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 10,
-      "last_scan": 1795245323,
-      "scans": 4,
+      "last_scan": 1795266031,
+      "scans": 5,
       "soft_days": [],
       "source": "snowball"
     },
@@ -209,10 +214,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 125,
-      "last_scan": 1795245323,
-      "scans": 6,
+      "last_scan": 1795266031,
+      "scans": 7,
       "soft_days": [],
       "source": "directory"
     },
@@ -222,10 +227,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 33,
-      "last_scan": 1795245323,
-      "scans": 6,
+      "last_scan": 1795266031,
+      "scans": 7,
       "soft_days": [],
       "source": "directory"
     },
@@ -248,10 +253,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 18,
-      "last_scan": 1795245323,
-      "scans": 4,
+      "last_scan": 1795266031,
+      "scans": 5,
       "soft_days": [],
       "source": "snowball"
     },
@@ -270,14 +275,14 @@
     },
     "pantaupenipu": {
       "cool_until": 0,
-      "dry_runs": 1,
+      "dry_runs": 2,
       "fails": 0,
       "hard_days": [],
       "harvested": 9,
-      "last_ok": 1795245323,
-      "last_post": 18270,
-      "last_scan": 1795245323,
-      "scans": 5,
+      "last_ok": 1795266031,
+      "last_post": 18281,
+      "last_scan": 1795266031,
+      "scans": 6,
       "soft_days": [],
       "source": "snowball"
     },
@@ -287,10 +292,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 128,
-      "last_scan": 1795245323,
-      "scans": 4,
+      "last_scan": 1795266031,
+      "scans": 5,
       "soft_days": [],
       "source": "snowball"
     },
@@ -300,10 +305,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 16,
-      "last_scan": 1795245323,
-      "scans": 4,
+      "last_scan": 1795266031,
+      "scans": 5,
       "soft_days": [],
       "source": "snowball"
     },
@@ -313,10 +318,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 15,
-      "last_scan": 1795245323,
-      "scans": 5,
+      "last_scan": 1795266031,
+      "scans": 6,
       "soft_days": [],
       "source": "snowball"
     },
@@ -326,10 +331,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 9,
-      "last_scan": 1795245323,
-      "scans": 5,
+      "last_scan": 1795266031,
+      "scans": 6,
       "soft_days": [],
       "source": "snowball"
     },
@@ -339,10 +344,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 32,
-      "last_scan": 1795245323,
-      "scans": 3,
+      "last_scan": 1795266031,
+      "scans": 4,
       "soft_days": [],
       "source": "snowball"
     },
@@ -352,10 +357,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 23,
-      "last_scan": 1795245323,
-      "scans": 5,
+      "last_scan": 1795266031,
+      "scans": 6,
       "soft_days": [],
       "source": "snowball"
     },
@@ -365,10 +370,10 @@
       "fails": 0,
       "hard_days": [],
       "harvested": 0,
-      "last_ok": 1795245323,
+      "last_ok": 1795266031,
       "last_post": 18,
-      "last_scan": 1795245323,
-      "scans": 3,
+      "last_scan": 1795266031,
+      "scans": 4,
       "soft_days": [],
       "source": "snowball"
     },
@@ -437,6 +442,14 @@
       "soft_days": [],
       "source": "snowball"
     },
+    "pharmiacist": {
+      "dry_runs": 0,
+      "harvested": 0,
+      "last_post": 0,
+      "last_scan": 0,
+      "scans": 0,
+      "source": "snowball:@Apoteikerpenipu"
+    },
     "pnipunokshop": {
       "cool_until": 0,
       "dry_runs": 4,
@@ -451,11 +464,16 @@
       "source": "snowball"
     },
     "rambutanj": {
+      "cool_until": 0,
       "dry_runs": 0,
-      "harvested": 0,
-      "last_post": 0,
-      "last_scan": 0,
-      "scans": 0,
+      "fails": 0,
+      "hard_days": [],
+      "harvested": 1,
+      "last_ok": 1795266031,
+      "last_post": 29,
+      "last_scan": 1795266031,
+      "scans": 1,
+      "soft_days": [],
       "source": "snowball:@pantaupenipu"
     },
     "rekampenipu": {
@@ -470,6 +488,14 @@
       "scans": 6,
       "soft_days": [],
       "source": "seed"
+    },
+    "rekberfamous": {
+      "dry_runs": 0,
+      "harvested": 0,
+      "last_post": 0,
+      "last_scan": 0,
+      "scans": 0,
+      "source": "snowball:@rambutanj"
     },
     "scamdetector_id": {
       "cool_until": 0,
@@ -524,11 +550,16 @@
       "source": "snowball"
     },
     "v_tub": {
+      "cool_until": 0,
       "dry_runs": 0,
-      "harvested": 0,
-      "last_post": 0,
-      "last_scan": 0,
-      "scans": 0,
+      "fails": 0,
+      "hard_days": [],
+      "harvested": 1,
+      "last_ok": 1795266031,
+      "last_post": 164,
+      "last_scan": 1795266031,
+      "scans": 1,
+      "soft_days": [],
       "source": "directory"
     },
     "ygnipumsukneraka": {
@@ -545,8 +576,129 @@
       "source": "snowball:@pantaupenipu"
     }
   },
-  "disc_cursor": 6,
-  "queue": {},
+  "disc_cursor": 2,
+  "queue": {
+    "angekicaswtyua": {
+      "name": "angekicaswtyua",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "cantinanan": {
+      "name": "cantinanan",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "ciiptt": {
+      "name": "CIiptt",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "clyasenli": {
+      "name": "Clyasenli",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "dfleurr": {
+      "name": "dfleurr",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "gfleurys": {
+      "name": "gfleurys",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "gorbiok": {
+      "name": "gorbIok",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "jaiangb": {
+      "name": "JaIangB",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "jancokpenipugendeng": {
+      "name": "jancokpenipugendeng",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "klarifikasipapipopeta": {
+      "name": "klarifikasipapipopeta",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "mesuim": {
+      "name": "mesuim",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "mesuimpenipu": {
+      "name": "mesuimpenipu",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "mfleurr": {
+      "name": "mfleurr",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "mtrobounds": {
+      "name": "mtrobounds",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "penipuanjeing": {
+      "name": "penipuanjeing",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "reionp": {
+      "name": "reionp",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "situasg": {
+      "name": "situasg",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "soutvse": {
+      "name": "soutvse",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "spillgioblok": {
+      "name": "spillgioblok",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    },
+    "yumnjda": {
+      "name": "yumnjDa",
+      "src": "snowball:@pantaupenipu",
+      "tries": 0,
+      "ts": 1795266031
+    }
+  },
   "rejected": {
     "aksigagalbayarpinjol": 1792912523,
     "akunigstokk": 1792912523,
@@ -555,13 +707,16 @@
     "bantaipenipyu": 1792912523,
     "basewibcs": 1792912523,
     "basewtbchat": 1792912523,
+    "bbc_teror": 1795266031,
     "bogkarteleiscam": 1792912523,
     "caaion": 1792912523,
     "cbegai": 1792912523,
+    "chalshkod": 1795266031,
     "cinthey": 1792912523,
     "di40indonesia": 1792912523,
     "dunhillpenipu": 1792912523,
     "evanpenipu": 1792912523,
+    "exchangecountercustomerservice": 1795266031,
     "firsaarchive": 1792912523,
     "fleurmerch": 1795251630,
     "ftomut": 1795251630,
@@ -573,6 +728,7 @@
     "irinarecivemoney": 1792912523,
     "jebakanpinjolilegal": 1792912523,
     "jjjsjsjskh": 1792912523,
+    "kagebeh": 1795266031,
     "kasinopenipu": 1792912523,
     "kavlove": 1792912523,
     "kjudes": 1792912523,
@@ -613,6 +769,7 @@
     "selebgracm": 1795245323,
     "sharingpinjol": 1792912523,
     "sitaqmpan": 1792912523,
+    "sjsjdjdodkd": 1795266031,
     "sowtca": 1792912523,
     "spillcemaroa": 1792912523,
     "spillmalinggpt": 1792912523,
@@ -620,15 +777,23 @@
     "strawberryyeww": 1792912523,
     "taralokaa": 1792912523,
     "taran_vogel": 1792912523,
+    "tecila": 1795266031,
+    "teror_hacker": 1795266031,
+    "terorsa": 1795266031,
     "testicarin": 1792912523,
     "toionng": 1792912523,
     "urnokosloxa": 1795245323,
     "vanntzy12": 1795245323,
     "vetro_oscurato": 1792912523,
+    "vtube_admin": 1795266031,
+    "vtube_official_channel": 1795266031,
+    "vtube_support": 1795266031,
+    "vtubeadmin_indonesia": 1795266031,
     "whatsappgc": 1792912523,
     "wtsbju": 1795245323,
     "wwwinvesbodong": 1792912523,
     "yahscammer": 1795245323,
+    "yalanam": 1795266031,
     "yusup_pinetwork": 1792912523
   },
   "retired": {},
