@@ -1,0 +1,18 @@
+[telegram]
+channels = [
+  "rekampenipu",
+  "cekrekening",
+  "scamdetector_id",
+]
+
+[reddit]
+subreddits = [
+  "indonesia",
+  "finansial",
+  "indonesiabebas",
+]
+
+[web]
+urls = [
+  "https://www.kaskus.co.id/forum/21/",
+]
