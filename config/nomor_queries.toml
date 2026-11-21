@@ -1,0 +1,21 @@
+[telegram_discovery]
+queries = [
+  "penipu",
+  "pinjol",
+  "galbay",
+  "scam indonesia",
+  "blacklist penipu",
+  "cek rekening penipu",
+  "teror pinjol",
+]
+
+[reddit_search]
+queries = [
+  "nomor penipu",
+  "teror pinjol",
+  "dc pinjol nomor",
+  "penipuan wa 08",
+  "galbay pinjol teror",
+  "nomor scammer indonesia",
+  "penipu mengatasnamakan",
+]
